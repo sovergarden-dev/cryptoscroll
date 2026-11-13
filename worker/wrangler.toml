@@ -1,0 +1,31 @@
+name = "cryptoscroll-worker"
+main = "index.ts"
+compatibility_date = "2026-11-10"
+send_metrics = false
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "NOTES_KV"
+# Local development works without an account. Replace this ID before deployment.
+id = "00000000000000000000000000000000"
+
+[durable_objects]
+bindings = [
+  { name = "NOTE_VAULT", class_name = "NoteVault" },
+  { name = "NOTE_COUNTER", class_name = "NoteCounter" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["NoteVault", "NoteCounter"]
+
+[vars]
+ENVIRONMENT = "production"
+ALLOWED_ORIGINS = "https://cryptoscroll.syrin.online"
+
+[[routes]]
+pattern = "cryptoscroll.syrin.online/api/*"
+zone_name = "syrin.online"
+
+[observability]
+enabled = false

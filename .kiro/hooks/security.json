@@ -1,0 +1,12 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Check secret boundaries after save",
+      "trigger": "PostFileSave",
+      "matcher": "(src[\\\\/]lib|worker|shared)[\\\\/].*\\.(ts|tsx)$",
+      "action": { "type": "command", "command": "node scripts/security-lint.mjs" },
+      "timeout": 30
+    }
+  ]
+}

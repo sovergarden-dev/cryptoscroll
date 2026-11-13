@@ -1,0 +1,29 @@
+{
+  "name": "cryptoscroll-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "wrangler dev --config wrangler.toml --local --port 8787 --var ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173 --var ENVIRONMENT:development",
+    "deploy": "wrangler deploy --config wrangler.toml",
+    "build": "wrangler deploy --config wrangler.toml --dry-run --outdir dist",
+    "typecheck": "tsc --noEmit",
+    "types": "wrangler types --config wrangler.toml"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261113.1",
+    "miniflare": "5.20261110.2-beta",
+    "typescript": "^5.8.3",
+    "wrangler": "4.161.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261110.1": true
+  }
+}

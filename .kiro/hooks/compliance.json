@@ -1,0 +1,11 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Check compliance before git commit",
+      "trigger": "PreToolUse",
+      "action": { "type": "command", "command": "node scripts/kiro-pre-commit.mjs" },
+      "timeout": 30
+    }
+  ]
+}

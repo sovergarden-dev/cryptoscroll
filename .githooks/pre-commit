@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+bash .kiro/hooks/post-save-security-lint.sh
+bash .kiro/hooks/pre-commit-compliance.sh

@@ -30,4 +30,4 @@ use the editor.
 <!-- LOVABLE:END -->
 
 - Note crypto lives in src/lib/crypto.ts (WebCrypto AES-GCM); the link key must only ever appear in the URL hash — never path, query, or storage.
-- Notes are stored in localStorage via src/lib/notes.ts (MVP, no backend); swap that module to move storage server-side.
+- The API protocol and one-time-read invariants live in `.kiro/specs/cryptoscroll.md`; every payload read goes through its per-note Durable Object. GET returns metadata only.

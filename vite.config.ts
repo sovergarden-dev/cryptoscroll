@@ -10,9 +10,19 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  serverFnErrorLogger: false,
+  ssrErrorLogger: false,
+  vite: {
+    base: "/",
+    server: {
+      host: "127.0.0.1",
+      port: 5173,
+      strictPort: true,
+      proxy: { "/api": { target: "http://127.0.0.1:8787", changeOrigin: true } },
+    },
+  },
   tanstackStart: {
-    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
+    // Preserve the SSR error wrapper in src/server.ts.
     server: { entry: "server" },
   },
 });

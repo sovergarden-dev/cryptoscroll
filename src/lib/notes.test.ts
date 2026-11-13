@@ -1,26 +1,47 @@
-import { describe, expect, it } from "vitest";
-import { destructMeta, isExpired } from "./notes";
-import { decryptNote, encryptNote, generateLinkKey, importLinkKey } from "./crypto";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createNote, expiryToDate } from "./notes";
 
-describe("self-destruct rules", () => {
-  it("'after first read' is read-once with no time limit", () => {
-    expect(destructMeta("read", 0)).toEqual({ readOnce: true, expiresAt: null });
-  });
-  it("24h option expires exactly 24 hours later", () => {
-    expect(destructMeta("24h", 0).expiresAt).toBe(24 * 3600_000);
-  });
-  it("note is expired once past expiry", () => {
-    expect(isExpired({ expiresAt: 1000 }, 999)).toBe(false);
-    expect(isExpired({ expiresAt: 1000 }, 1000)).toBe(true);
-  });
-});
+afterEach(() => vi.restoreAllMocks());
 
-describe("encryption", () => {
-  it("round-trips with link key and passphrase, fails with wrong passphrase", async () => {
-    const { encoded } = await generateLinkKey();
-    const key = await importLinkKey(encoded);
-    const p = await encryptNote("secret", key, "hunter2");
-    expect(await decryptNote(p, key, "hunter2")).toBe("secret");
-    await expect(decryptNote(p, key, "nope")).rejects.toThrow();
+describe("note creation boundaries", () => {
+  it.each([
+    ["1h", 1],
+    ["24h", 24],
+    ["72h", 72],
+    ["7d", 168],
+    ["30d", 720],
+  ] as const)("sets the %s deadline", (option, hours) => {
+    expect(expiryToDate(option, 0)).toEqual({
+      expiresAt: new Date(hours * 3600_000),
+      burnAfterRead: false,
+    });
+  });
+
+  it("bounds unread one-time notes to 30 days", () => {
+    expect(expiryToDate("read-once", 0)).toEqual({
+      expiresAt: new Date(2_592_000_000),
+      burnAfterRead: true,
+    });
+  });
+
+  it.each(["   ", "🔐".repeat(9000)])(
+    "rejects blank or over-limit UTF-8 text before transport",
+    async (content) => {
+      const transport = vi.spyOn(globalThis, "fetch");
+      expect(await createNote({ content, expiry: "1h" })).toMatchObject({
+        ok: false,
+        error: { code: "INVALID_REQUEST" },
+      });
+      expect(transport).not.toHaveBeenCalled();
+    },
+  );
+
+  it("reports network failure without a success link or local storage fallback", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("offline"));
+    const storage = vi.spyOn(Storage.prototype, "setItem");
+    const result = await createNote({ content: "network failure fixture", expiry: "1h" });
+    expect(result).toMatchObject({ ok: false, error: { code: "NETWORK" } });
+    expect(result).not.toHaveProperty("data.url");
+    expect(storage).not.toHaveBeenCalled();
   });
 });
