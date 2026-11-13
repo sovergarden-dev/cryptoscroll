@@ -81,7 +81,7 @@ async function open(key: CryptoKey, blob: Uint8Array<ArrayBuffer>): Promise<Uint
 
 export interface EncryptedPayload {
   ciphertext: string; // base64url(iv || ct)
-  salt?: string; // base64url, present only when passphrase-protected
+  salt?: string | undefined; // base64url, present only when passphrase-protected
 }
 
 /** Encrypt plaintext with the link key, optionally wrapped by a passphrase layer first. */
