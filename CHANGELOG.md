@@ -4,6 +4,7 @@
 
 ### Added
 
+- Bounded, explicit creation recovery using a timestamped independent nonce, a per-note durable pending record and an in-memory encrypted browser request; consumed/expired notes cannot be recreated by a retry.
 - Anonymous creation throttling before storage, with typed 429 responses and a daily HMAC network bucket; no raw address is stored in application data.
 - Confirmed sender-side revocation with passphrase re-entry, keyboard focus and truthful network-failure feedback.
 - Production CSP nonces, content-free server error logging, compiled-Worker acceptance across Chromium/Firefox/WebKit, and separate read-only/live-synthetic verification commands.

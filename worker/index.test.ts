@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createWorkerRuntime } from "./test/runtime";
+import { creationIdentity } from "./creation-recovery";
 import {
   base64ToKey,
   decryptNote,
@@ -19,6 +20,8 @@ import {
   NoteMetadataSchema,
   type CreateNoteRequest,
   type ReadNoteRequest,
+  CREATION_RETRY_MS,
+  CLOCK_TOLERANCE_MS,
 } from "../shared/protocol";
 
 let runtime: Awaited<ReturnType<typeof createWorkerRuntime>>;
@@ -72,7 +75,10 @@ function read(id: string, proof: ReadNoteRequest) {
   });
 }
 
-async function control(id: string, action: "expire" | "forget" | "alarm") {
+async function control(
+  id: string,
+  action: "expire" | "forget" | "alarm" | "fail-write" | "fail-after-write",
+) {
   const namespace = await runtime.getDurableObjectNamespace("NOTE_VAULT");
   const response = await namespace
     .get(namespace.idFromName(id))
@@ -88,6 +94,161 @@ afterAll(async () => {
 });
 
 describe("Cloudflare Worker with real KV and Durable Objects", () => {
+  async function recoverable(burnAfterRead = true) {
+    const fixture = await envelope(burnAfterRead);
+    fixture.body.creationToken = {
+      issuedAt: new Date().toISOString(),
+      nonce: crypto.randomUUID().replaceAll("-", ""),
+    };
+    return fixture;
+  }
+
+  function submit(body: CreateNoteRequest) {
+    return runtime.dispatchFetch("https://cryptoscroll.test/api/notes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+
+  it("returns one creation and one count increment for concurrent identical retries", async () => {
+    const { body, proof } = await recoverable();
+    const before = NoteCountSchema.parse(
+      await (await runtime.dispatchFetch("https://cryptoscroll.test/api/stats")).json(),
+    ).count;
+    const responses = await Promise.all(Array.from({ length: 8 }, () => submit(body)));
+    expect(responses.filter((response) => response.status === 201)).toHaveLength(1);
+    expect(responses.filter((response) => response.status === 200)).toHaveLength(7);
+    const results = await Promise.all(
+      responses.map(async (response) => CreatedNoteSchema.parse(await response.json())),
+    );
+    expect(new Set(results.map((result) => JSON.stringify(result))).size).toBe(1);
+    const id = results[0]!.id;
+    await expect
+      .poll(
+        async () =>
+          NoteCountSchema.parse(
+            await (await runtime.dispatchFetch("https://cryptoscroll.test/api/stats")).json(),
+          ).count,
+      )
+      .toBe(before + 1);
+    await runtime.unsafeEvictDurableObject("cryptoscroll-test", "NoteVault", { name: id });
+    expect((await submit(body)).status).toBe(200);
+    const metadata = await (
+      await runtime.dispatchFetch(`https://cryptoscroll.test/api/notes/${id}`)
+    ).json();
+    expect(metadata).not.toHaveProperty("requestHash");
+    expect(metadata).not.toHaveProperty("creationToken");
+    expect((await read(id, proof)).status).toBe(200);
+    expect((await submit(body)).status).toBe(410);
+    expect(await (await runtime.getKVNamespace("NOTES_KV")).get(id)).toBeNull();
+  });
+
+  it("rejects a changed envelope and never reopens revoked or expired creations", async () => {
+    for (const terminal of ["revoke", "expire"] as const) {
+      const { body, proof } = await recoverable(terminal === "expire");
+      const initial = CreatedNoteSchema.parse(await (await submit(body)).json());
+      const conflict = await submit({ ...body, burnAfterRead: !body.burnAfterRead });
+      expect(conflict.status).toBe(409);
+      expect(await conflict.json()).toMatchObject({ error: { code: "CREATION_CONFLICT" } });
+      expect(await (await submit(body)).json()).toEqual(initial);
+      if (terminal === "revoke") {
+        expect(
+          (
+            await runtime.dispatchFetch(`https://cryptoscroll.test/api/notes/${initial.id}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${proof.readToken}` },
+            })
+          ).status,
+        ).toBe(200);
+      } else {
+        await control(initial.id, "expire");
+        await control(initial.id, "alarm");
+      }
+      expect((await submit(body)).status).toBe(410);
+      expect((await read(initial.id, proof)).status).toBe(410);
+    }
+  });
+
+  it.each(["fail-write", "fail-after-write"] as const)(
+    "resumes the reserved envelope after %s and object eviction",
+    async (fault) => {
+      const { body, proof } = await recoverable();
+      const identity = await creationIdentity(body);
+      if (!identity.ok) throw new Error("Fixture identity rejected");
+      await control(identity.data, fault);
+      expect((await submit(body)).status).toBe(503);
+      expect((await read(identity.data, proof)).status).toBe(503);
+      await runtime.unsafeEvictDurableObject("cryptoscroll-test", "NoteVault", {
+        name: identity.data,
+      });
+      expect((await read(identity.data, proof)).status).toBe(503);
+      expect((await submit({ ...body, burnAfterRead: false })).status).toBe(409);
+      const recovered = await submit(body);
+      expect(recovered.status).toBe(201);
+      expect(CreatedNoteSchema.parse(await recovered.json()).id).toBe(identity.data);
+      expect((await read(identity.data, proof)).status).toBe(200);
+      expect((await submit(body)).status).toBe(410);
+    },
+  );
+
+  it("removes an unacknowledged pending KV payload on its expiry alarm", async () => {
+    const { body } = await recoverable();
+    const identity = await creationIdentity(body);
+    if (!identity.ok) throw new Error("Fixture identity rejected");
+    await control(identity.data, "fail-after-write");
+    expect((await submit(body)).status).toBe(503);
+    const kv = await runtime.getKVNamespace("NOTES_KV");
+    expect(await kv.get(identity.data)).not.toBeNull();
+    await control(identity.data, "expire");
+    await control(identity.data, "alarm");
+    expect(await kv.get(identity.data)).toBeNull();
+    expect((await submit(body)).status).toBe(410);
+  });
+
+  it("rejects stale tokens after tombstone cleanup and binds clock changes to a different ID", async () => {
+    const { body, proof } = await recoverable();
+    const issuedAt = Date.now() - CREATION_RETRY_MS - 60_000;
+    body.creationToken!.issuedAt = new Date(issuedAt).toISOString();
+    const identity = await creationIdentity(body, issuedAt);
+    if (!identity.ok) throw new Error("Fixture identity rejected");
+    const namespace = await runtime.getDurableObjectNamespace("NOTE_VAULT");
+    // Seed the state of a creation accepted in the past, without waiting ten minutes.
+    expect(
+      (
+        await namespace
+          .get(namespace.idFromName(identity.data))
+          .fetch(`https://vault/${identity.data}`, {
+            method: "PUT",
+            body: JSON.stringify(body),
+          })
+      ).status,
+    ).toBe(201);
+    expect((await read(identity.data, proof)).status).toBe(200);
+    await control(identity.data, "forget");
+    await control(identity.data, "alarm");
+    const stale = await submit(body);
+    expect(stale.status).toBe(409);
+    expect(await stale.json()).toMatchObject({ error: { code: "CREATION_EXPIRED" } });
+    expect(
+      (await runtime.dispatchFetch(`https://cryptoscroll.test/api/notes/${identity.data}`)).status,
+    ).toBe(404);
+    const changed = {
+      ...body,
+      creationToken: { ...body.creationToken!, issuedAt: new Date().toISOString() },
+    };
+    const newIdentity = await creationIdentity(changed);
+    expect(newIdentity.ok && newIdentity.data).not.toBe(identity.data);
+    const future = {
+      ...body,
+      creationToken: {
+        ...body.creationToken!,
+        issuedAt: new Date(Date.now() + CLOCK_TOLERANCE_MS + 60_000).toISOString(),
+      },
+    };
+    expect((await submit(future)).status).toBe(409);
+  });
+
   it("denies excess creation before storage while existing reads remain authorized", async () => {
     const limited = await createWorkerRuntime(false, "http://localhost:5173", { creationLimit: 1 });
     try {

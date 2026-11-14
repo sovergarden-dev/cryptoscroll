@@ -44,7 +44,7 @@ async function main() {
       signal: AbortSignal.timeout(30_000),
     });
   }
-  async function create(burnAfterRead, passphrase) {
+  async function create(burnAfterRead, passphrase, recoverable = true) {
     const key = await cryptoClient.generateKey();
     const encoded = await cryptoClient.keyToBase64(key);
     const readToken = await cryptoClient.deriveReadToken(encoded);
@@ -63,7 +63,7 @@ async function main() {
         key: derived.key,
       };
     }
-    const response = await request("/notes", "POST", {
+    const envelope = {
       version: 1,
       ...payload,
       expiresAt: new Date(Date.now() + 300_000).toISOString(),
@@ -74,14 +74,25 @@ async function main() {
         passphraseSalt: protection.passphraseSalt,
         passphraseVerifier: protection.passphraseVerifier,
       }),
-    });
+      ...(recoverable && {
+        creationToken: {
+          issuedAt: new Date().toISOString(),
+          nonce: Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
+            byte.toString(16).padStart(2, "0"),
+          ).join(""),
+        },
+      }),
+    };
+    const response = await request("/notes", "POST", envelope);
     assert.equal(response.status, 201, "create status");
-    const { id } = await response.json();
+    const { id, expiresAt } = await response.json();
     assert.match(id, /^[a-f0-9]{32}$/);
     const note = {
       id,
       key,
       protection,
+      envelope,
+      expiresAt,
       proof: {
         readToken,
         ...(protection && { passphraseVerifier: protection.passphraseVerifier }),
@@ -106,11 +117,30 @@ async function main() {
     assert.equal((await health.json()).status, "ok");
     stage = "protected-note";
     const protectedNote = await create(true, "Synthetic passphrase for live checks");
+    stage = "creation-recovery";
+    const recovered = await request("/notes", "POST", protectedNote.envelope);
+    assert.equal(recovered.status, 200);
+    const acknowledgement = await recovered.json();
+    assert.equal(acknowledgement.id, protectedNote.id);
+    assert.equal(acknowledgement.expiresAt, protectedNote.expiresAt);
+    const conflict = await request("/notes", "POST", {
+      ...protectedNote.envelope,
+      burnAfterRead: false,
+    });
+    assert.equal(conflict.status, 409);
+    assert.equal((await conflict.json()).error.code, "CREATION_CONFLICT");
+    stage = "protected-note";
     const metadata = await request("/notes/" + protectedNote.id);
     assert.equal(metadata.status, 200);
     const meta = await metadata.json();
     assert.equal(meta.hasPassphrase, true);
-    for (const property of ["ciphertext", "readTokenHash", "passphraseVerifier"])
+    for (const property of [
+      "ciphertext",
+      "readTokenHash",
+      "passphraseVerifier",
+      "creationToken",
+      "requestHash",
+    ])
       assert.equal(property in meta, false);
     const wrongKey = await read(protectedNote, {
       ...protectedNote.proof,
@@ -133,6 +163,9 @@ async function main() {
       "Synthetic live check: Tiếng Việt 🔐",
     );
     assert.equal((await read(protectedNote)).status, 410);
+    assert.equal((await request("/notes", "POST", protectedNote.envelope)).status, 410);
+    results.creationRecovery =
+      "same creation returns 200; changed payload conflicts; consumed note stays retired";
     results.protected = "wrong key/passphrase preserve note; correct read decrypts; replay 410";
     stage = "concurrent-read";
     const raceNote = await create(true);
@@ -146,7 +179,13 @@ async function main() {
     assert.equal((await read(timedNote)).status, 200);
     assert.equal((await revoke(timedNote)).status, 200);
     assert.equal((await request("/notes/" + timedNote.id)).status, 410);
+    assert.equal((await request("/notes", "POST", timedNote.envelope)).status, 410);
     results.timed = "repeat reads work; authenticated revoke returns 200";
+    stage = "legacy-envelope";
+    const legacyNote = await create(true, undefined, false);
+    assert.equal((await read(legacyNote)).status, 200);
+    assert.equal((await read(legacyNote)).status, 410);
+    results.legacy = "version-1 envelopes without a recovery token remain usable";
     stage = "cors";
     const forbidden = await fetch(base + "/stats", {
       headers: { Origin: "https://untrusted.invalid" },
@@ -170,7 +209,7 @@ async function main() {
           result: "FAIL",
           stage: "cleanup",
           failed: failed.length,
-          maximumFixtureLifetimeSeconds: 300,
+          requestedFixtureLifetimeSeconds: 300,
         }),
       );
       process.exitCode = 1;
