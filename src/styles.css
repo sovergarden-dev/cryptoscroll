@@ -78,8 +78,6 @@
   --success: #16a34a;
   --warning: #d97706;
   --warning-text: #fcd34d;
-  --qr-background: #fff;
-  --qr-foreground: #000;
   --shadow-glow: 0 24px 90px -60px var(--primary);
 }
 

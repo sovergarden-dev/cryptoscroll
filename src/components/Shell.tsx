@@ -1,8 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Github, ShieldCheck } from "lucide-react";
+import { useI18n, type Language } from "@/lib/i18n";
 
 export function Shell({ children }: { children: ReactNode }) {
+  const { t, language, setLanguage } = useI18n();
   return (
     <div className="relative mx-auto flex min-h-svh max-w-6xl flex-col px-5 sm:px-8">
       <button
@@ -10,7 +12,7 @@ export function Shell({ children }: { children: ReactNode }) {
         onClick={() => document.getElementById("main-content")?.focus()}
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:z-50 focus:rounded-lg focus:bg-card focus:p-3"
       >
-        Skip to content
+        {t("skip")}
       </button>
       <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border/60 py-6">
         <Link to="/" className="flex items-center gap-3 text-lg font-semibold tracking-tight">
@@ -23,20 +25,35 @@ export function Shell({ children }: { children: ReactNode }) {
           CryptoScroll
         </Link>
         <nav
-          aria-label="Main navigation"
+          aria-label={t("navigation")}
           className="flex items-center gap-5 text-xs text-muted-foreground"
         >
           <span className="hidden items-center gap-2 sm:flex">
-            <ShieldCheck className="size-4 text-success" aria-hidden="true" /> Encrypted in your
-            browser
+            <ShieldCheck className="size-4 text-success" aria-hidden="true" />{" "}
+            {t("browserEncrypted")}
           </span>
+          <label>
+            <span className="sr-only">Language / Ngôn ngữ</span>
+            <select
+              value={language}
+              onChange={(event) => setLanguage(event.target.value as Language)}
+              className="min-h-11 rounded-md border bg-background px-2 text-foreground"
+            >
+              <option value="en" lang="en">
+                English
+              </option>
+              <option value="vi" lang="vi">
+                Tiếng Việt
+              </option>
+            </select>
+          </label>
           <a
             className="flex items-center gap-2 transition-colors hover:text-foreground"
             href="https://github.com/sovergarden-dev/cryptoscroll"
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Github className="size-4" aria-hidden="true" /> Source
+            <Github className="size-4" aria-hidden="true" /> {t("source")}
           </a>
         </nav>
       </header>
@@ -49,7 +66,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </main>
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 py-5 text-xs text-muted-foreground">
         <span className="flex items-center gap-2">
-          <ShieldCheck className="size-3.5" aria-hidden="true" /> No account. No saved drafts.
+          <ShieldCheck className="size-3.5" aria-hidden="true" /> {t("noDrafts")}
         </span>
         <a
           href="https://github.com/sovergarden-dev/cryptoscroll#security-model"
@@ -57,7 +74,7 @@ export function Shell({ children }: { children: ReactNode }) {
           rel="noopener noreferrer"
           className="underline-offset-4 hover:text-foreground hover:underline"
         >
-          Security model & limits ↗
+          {t("limits")}
         </a>
       </footer>
     </div>

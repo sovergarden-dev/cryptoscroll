@@ -9,9 +9,29 @@ export default defineConfig({
   outputDir: "test-results",
   reporter: [["list"], ["html", { open: "never" }]],
   projects: [
-    { name: "chromium", use: { browserName: "chromium" } },
-    { name: "firefox", use: { browserName: "firefox" } },
-    { name: "webkit", use: { browserName: "webkit" } },
+    { name: "chromium", testIgnore: "**/accessibility.spec.ts", use: { browserName: "chromium" } },
+    { name: "firefox", testIgnore: "**/accessibility.spec.ts", use: { browserName: "firefox" } },
+    { name: "webkit", testIgnore: "**/accessibility.spec.ts", use: { browserName: "webkit" } },
+    // Windows axe/Firefox crashes are recorded in docs/ref/product-followup-verification.md; Linux CI still runs that audit.
+    ...(process.platform === "win32"
+      ? []
+      : [
+          {
+            name: "accessibility-firefox",
+            testMatch: "**/accessibility.spec.ts",
+            use: { browserName: "firefox" as const },
+          },
+        ]),
+    {
+      name: "accessibility-chromium",
+      testMatch: "**/accessibility.spec.ts",
+      use: { browserName: "chromium" },
+    },
+    {
+      name: "accessibility-webkit",
+      testMatch: "**/accessibility.spec.ts",
+      use: { browserName: "webkit" },
+    },
   ],
   use: {
     viewport: { width: 1440, height: 1000 },

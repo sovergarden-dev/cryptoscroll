@@ -35,11 +35,7 @@ test("shares a protected one-time note across isolated desktop and mobile viewpo
   const url = await page.getByLabel("Your private link").inputValue();
   const parsed = new URL(url);
   expect(parsed.hash).toMatch(/^#[A-Za-z0-9_-]{43}$/);
-  await expect(
-    page
-      .locator("svg")
-      .filter({ has: page.locator("title", { hasText: "QR code for this note" }) }),
-  ).toBeVisible();
+  await expect(page.getByRole("img", { name: "QR code for this note" })).toBeVisible();
   await page.getByRole("button", { name: "Copy link" }).click();
   await expect(page.getByRole("button", { name: "Copied!" })).toBeVisible();
   expect(
@@ -138,11 +134,9 @@ test("supports timed rereads, missing keys, network recovery, reduced motion and
   await page.route("**/api/notes", (route) => route.abort("internetdisconnected"));
   await page.getByRole("button", { name: "Create Note", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Could not reach");
-  await expect(page.getByLabel("Your secret note")).toHaveValue(
-    "Timed note survives repeat reads.",
-  );
+  await expect(page.getByLabel("Your secret note")).toHaveCount(0);
   await page.unroute("**/api/notes");
-  await page.getByRole("button", { name: "Create Note", exact: true }).click();
+  await page.getByRole("button", { name: "Retry this creation", exact: true }).click();
   const link = page.getByLabel("Your private link");
   await expect(link).toBeVisible();
   const url = await link.inputValue();
@@ -245,6 +239,12 @@ test("revokes a protected note only after confirmation and a correct passphrase"
   await trigger.click();
   const confirmation = page.getByRole("alertdialog");
   await expect(confirmation.getByRole("button", { name: "Keep note" })).toBeFocused();
+  for (const key of ["Tab", "Tab", "Tab", "Shift+Tab", "Shift+Tab", "Shift+Tab"]) {
+    await page.keyboard.press(key);
+    expect(await confirmation.evaluate((dialog) => dialog.contains(document.activeElement))).toBe(
+      true,
+    );
+  }
   await confirmation.getByRole("button", { name: "Keep note" }).click();
   await expect(confirmation).not.toBeVisible();
   await expect(trigger).toBeFocused();

@@ -4,7 +4,9 @@
 
 ### Added
 
+- Configurable unread deadlines for one-time notes, with a 24-hour default for new UI creations and unchanged existing links.
 - Bounded, explicit creation recovery using a timestamped independent nonce, a per-note durable pending record and an in-memory encrypted browser request; consumed/expired notes cannot be recreated by a retry.
+- English/Vietnamese note flows, native mobile sharing with cancellation/fallback handling, and local PNG QR export.
 - Anonymous creation throttling before storage, with typed 429 responses and a daily HMAC network bucket; no raw address is stored in application data.
 - Confirmed sender-side revocation with passphrase re-entry, keyboard focus and truthful network-failure feedback.
 - Production CSP nonces, content-free server error logging, compiled-Worker acceptance across Chromium/Firefox/WebKit, and separate read-only/live-synthetic verification commands.
@@ -21,6 +23,9 @@
 
 ### Fixed
 
+- Refresh the aggregate note count within the same session and recover after transient count failures.
+- Focus warning, sealed, read and cleared states; translate errors by stable codes while preserving uncertain-read/revocation warnings.
+- Increase editor placeholder contrast and verify modal keyboard containment where automated scans require manual review.
 - Bound stalled API calls to 30 seconds without automatic retries of destructive reads, and preserve uncertain revocation results.
 - Keep the fallback error page usable under CSP and wait for hydration before capturing acceptance screenshots.
 - Connect hosted frontend/preview builds to the deployed HTTPS Worker instead of treating Lovable's `/api` path as the backend; preserve the local proxy and explicit self-hosting overrides.
