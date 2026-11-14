@@ -5,6 +5,9 @@ import {
   MAX_NOTE_BYTES,
   NOTE_ID,
   PROTOCOL_VERSION,
+  CREATION_RETRY_MS,
+  type CreateNoteRequest,
+  type TimedExpiryOption,
   type ExpiryOption,
   type NoteMetadata,
   type Result,
@@ -35,20 +38,37 @@ export interface NoteData extends Omit<CreatedNote, "url"> {
   content: string;
 }
 
-export function expiryToDate(expiry: ExpiryOption, now = Date.now()) {
-  const option = EXPIRY_OPTIONS.find((entry) => entry.value === expiry);
+export interface PendingCreation {
+  envelope: CreateNoteRequest;
+  encodedKey: string;
+  retryUntil: number;
+}
+
+export function expiryToDate(
+  expiry: ExpiryOption,
+  now = Date.now(),
+  unreadExpiry: TimedExpiryOption = "30d",
+) {
+  const option = EXPIRY_OPTIONS.find(
+    (entry) => entry.value === (expiry === "read-once" ? unreadExpiry : expiry),
+  );
   if (!option) throw new Error("Invalid expiry option");
   return {
     expiresAt: new Date(now + option.hours * 3600_000),
-    burnAfterRead: option.burnAfterRead,
+    burnAfterRead: expiry === "read-once",
   };
 }
 
-export async function createNote(options: {
+type CreationOptions = {
   content: string;
   expiry: ExpiryOption;
+  unreadExpiry?: TimedExpiryOption;
   passphrase?: string;
-}): Promise<Result<CreatedNote>> {
+};
+
+export async function prepareNoteCreation(
+  options: CreationOptions,
+): Promise<Result<PendingCreation>> {
   if (
     !options.content.trim() ||
     new TextEncoder().encode(options.content).length > MAX_NOTE_BYTES
@@ -74,7 +94,11 @@ export async function createNote(options: {
     };
   }
   try {
-    const { expiresAt, burnAfterRead } = expiryToDate(options.expiry);
+    const { expiresAt, burnAfterRead } = expiryToDate(
+      options.expiry,
+      Date.now(),
+      options.unreadExpiry,
+    );
     const primaryKey = await generateKey();
     const encodedKey = await keyToBase64(primaryKey);
     let encrypted = await encryptNote(options.content, primaryKey);
@@ -85,7 +109,8 @@ export async function createNote(options: {
       encrypted = await encryptNote(JSON.stringify(encrypted), key);
       protection = { passphraseSalt: bytesToBase64(salt), passphraseVerifier: verifier };
     }
-    const result = await uploadNote({
+    const issuedAt = new Date().toISOString();
+    const envelope: CreateNoteRequest = {
       version: PROTOCOL_VERSION,
       ...encrypted,
       expiresAt: expiresAt.toISOString(),
@@ -93,15 +118,19 @@ export async function createNote(options: {
       hasPassphrase: protection !== undefined,
       ...protection,
       readTokenHash: await hashProof(await deriveReadToken(encodedKey)),
-    });
-    if (!result.ok) return result;
+      creationToken: {
+        issuedAt,
+        nonce: Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
+          byte.toString(16).padStart(2, "0"),
+        ).join(""),
+      },
+    };
     return {
       ok: true,
       data: {
-        url: `${window.location.origin}${import.meta.env.BASE_URL}note/${result.data.id}#${encodedKey}`,
-        expiresAt: new Date(result.data.expiresAt),
-        burnAfterRead,
-        hasPassphrase: protection !== undefined,
+        envelope,
+        encodedKey,
+        retryUntil: Date.parse(issuedAt) + CREATION_RETRY_MS,
       },
     };
   } catch {
@@ -113,6 +142,30 @@ export async function createNote(options: {
       },
     };
   }
+}
+
+export async function submitNoteCreation(pending: PendingCreation): Promise<Result<CreatedNote>> {
+  if (Date.now() > pending.retryUntil)
+    return {
+      ok: false,
+      error: { code: "CREATION_EXPIRED", message: "The creation recovery window has ended." },
+    };
+  const result = await uploadNote(pending.envelope);
+  if (!result.ok) return result;
+  return {
+    ok: true,
+    data: {
+      url: `${window.location.origin}${import.meta.env.BASE_URL}note/${result.data.id}#${pending.encodedKey}`,
+      expiresAt: new Date(result.data.expiresAt),
+      burnAfterRead: pending.envelope.burnAfterRead,
+      hasPassphrase: pending.envelope.hasPassphrase,
+    },
+  };
+}
+
+export async function createNote(options: CreationOptions): Promise<Result<CreatedNote>> {
+  const prepared = await prepareNoteCreation(options);
+  return prepared.ok ? submitNoteCreation(prepared.data) : prepared;
 }
 
 type NoteAccess = { primaryKey: CryptoKey; proof: ReadNoteRequest; passphraseKey?: CryptoKey };

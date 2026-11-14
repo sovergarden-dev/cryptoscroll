@@ -6,6 +6,8 @@ export const MAX_NOTE_BYTES = 32 * 1024;
 export const MAX_REQUEST_BYTES = 128 * 1024;
 export const MAX_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 export const TOMBSTONE_MS = 24 * 60 * 60 * 1000;
+export const CREATION_RETRY_MS = 10 * 60_000;
+export const CLOCK_TOLERANCE_MS = 5 * 60_000;
 export const NOTE_ID = /^[a-f0-9]{32}$/;
 
 export const EXPIRY_OPTIONS = [
@@ -18,6 +20,15 @@ export const EXPIRY_OPTIONS = [
 ] as const;
 
 export type ExpiryOption = (typeof EXPIRY_OPTIONS)[number]["value"];
+export type TimedExpiryOption = Exclude<ExpiryOption, "read-once">;
+export const UNREAD_EXPIRY_OPTIONS = EXPIRY_OPTIONS.filter((option) => !option.burnAfterRead);
+
+export const CreationTokenSchema = z
+  .object({
+    issuedAt: z.string().datetime({ offset: true }),
+    nonce: z.string().regex(NOTE_ID),
+  })
+  .strict();
 
 function base64(byteLength?: number) {
   return z
@@ -62,6 +73,7 @@ export const CreateNoteSchema = z
     ...payloadFields,
     readTokenHash: base64(32),
     passphraseVerifier: base64(32).optional(),
+    creationToken: CreationTokenSchema.optional(),
   })
   .strict()
   .refine(validSalt, "Invalid passphrase salt")
@@ -101,6 +113,8 @@ export type ErrorCode =
   | "INVALID_REQUEST"
   | "TOO_LARGE"
   | "RATE_LIMITED"
+  | "CREATION_CONFLICT"
+  | "CREATION_EXPIRED"
   | "UNAVAILABLE"
   | "NETWORK"
   | "DECRYPT_FAILED"

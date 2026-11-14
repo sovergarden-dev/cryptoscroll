@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { QRCodeSVG } from "qrcode.react";
-import { ArrowLeft, Check, Copy, LockKeyhole, TriangleAlert } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
+import { ArrowLeft, Check, Copy, Download, Share2, LockKeyhole, TriangleAlert } from "lucide-react";
 import { Button } from "./ui/button";
 import type { CreatedNote } from "@/lib/notes";
 import { RevokeNoteDialog, type RevocationOutcome } from "./RevokeNoteDialog";
+import { useI18n } from "@/lib/i18n";
+import type { MessageKey } from "@/lib/messages";
 
 export function NoteSuccess({
   note,
@@ -12,24 +14,65 @@ export function NoteSuccess({
   note: CreatedNote;
   onCreateAnother: () => void;
 }) {
+  const { t, formatDate } = useI18n();
   const [copied, setCopied] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<MessageKey | null>(null);
+  const [status, setStatus] = useState<MessageKey | null>(null);
+  const [canShare, setCanShare] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const qr = useRef<HTMLCanvasElement>(null);
   const [retired, setRetired] = useState<RevocationOutcome | null>(null);
   const statusTitle = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
-    if (retired) statusTitle.current?.focus();
+    statusTitle.current?.focus();
   }, [retired]);
+  useEffect(() => {
+    setCanShare(typeof navigator.share === "function");
+  }, []);
 
   async function copy() {
     setCopied(false);
-    setError("");
+    setError(null);
+    setStatus(null);
     try {
       await navigator.clipboard.writeText(note.url);
       setCopied(true);
-      setError("");
+      setStatus("copiedStatus");
     } catch {
-      setError("Clipboard access is unavailable. Select the link and copy it manually.");
+      setError("clipboardError");
+    }
+  }
+
+  async function share() {
+    setError(null);
+    setStatus(null);
+    setSharing(true);
+    try {
+      await navigator.share({ title: "CryptoScroll", url: note.url });
+      setStatus("shareOpened");
+    } catch (cause) {
+      if (!(cause instanceof DOMException && cause.name === "AbortError")) setError("shareError");
+    } finally {
+      setSharing(false);
+    }
+  }
+
+  function saveQr() {
+    setError(null);
+    setStatus(null);
+    const anchor = document.createElement("a");
+    try {
+      if (!qr.current) throw new Error("QR is not ready.");
+      anchor.href = qr.current.toDataURL("image/png");
+      anchor.download = "cryptoscroll-qr.png";
+      document.body.append(anchor);
+      anchor.click();
+      setStatus("qrSaved");
+    } catch {
+      setError("qrError");
+    } finally {
+      anchor.remove();
     }
   }
 
@@ -40,14 +83,11 @@ export function NoteSuccess({
           <LockKeyhole aria-hidden="true" className="size-8" />
         </div>
         <h1 ref={statusTitle} tabIndex={-1} className="mt-6 text-2xl font-semibold">
-          {retired === "revoked" ? "Note revoked." : "This note is no longer available."}
+          {t(retired === "revoked" ? "revoked" : "noLongerAvailable")}
         </h1>
-        <p className="mt-3 text-muted-foreground">
-          This link can no longer retrieve the stored note. Copies already kept by a recipient are
-          unaffected.
-        </p>
+        <p className="mt-3 text-muted-foreground">{t("retiredHelp")}</p>
         <Button onClick={onCreateAnother} className="mt-6">
-          <ArrowLeft aria-hidden="true" /> Create another note
+          <ArrowLeft aria-hidden="true" /> {t("createAnother")}
         </Button>
       </section>
     );
@@ -61,17 +101,22 @@ export function NoteSuccess({
         <LockKeyhole aria-hidden="true" className="size-8" />
       </div>
       <p className="mt-6 font-mono text-xs uppercase tracking-widest text-primary-glow">
-        Transmission ready
+        {t("transmissionReady")}
       </p>
-      <h1 id="sealed-title" className="mt-2 text-3xl font-semibold tracking-tight">
-        Your scroll is sealed.
+      <h1
+        ref={statusTitle}
+        tabIndex={-1}
+        id="sealed-title"
+        className="mt-2 text-3xl font-semibold tracking-tight"
+      >
+        {t("sealed")}
       </h1>
       <p className="mt-3 leading-relaxed text-muted-foreground">
-        Share the complete link or scan the QR code on another device.
-        {note.hasPassphrase && " Send the passphrase through a separate channel."}
+        {t("shareIntro")}
+        {note.hasPassphrase && ` ${t("separatePassphrase")}`}
       </p>
       <label htmlFor="share-link" className="mt-7 block text-sm font-medium">
-        Your private link
+        {t("privateLink")}
       </label>
       <div className="mt-2 flex flex-col gap-3 sm:flex-row">
         <input
@@ -84,42 +129,55 @@ export function NoteSuccess({
         />
         <Button onClick={copy} className="h-11">
           {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
-          {copied ? "Copied!" : "Copy link"}
+          {t(copied ? "copied" : "copy")}
         </Button>
       </div>
       <p role="status" className="mt-2 min-h-5 text-xs text-success">
-        {copied ? "Link copied to clipboard." : ""}
+        {status ? t(status) : ""}
       </p>
       {error && (
         <p role="alert" className="text-sm text-danger-text">
-          {error}
+          {t(error)}
         </p>
       )}
+      <div className="mt-3 flex flex-wrap gap-3">
+        {canShare && (
+          <Button variant="outline" onClick={share} disabled={sharing}>
+            <Share2 aria-hidden="true" />
+            {t("share")}
+          </Button>
+        )}
+        <Button variant="outline" onClick={saveQr} aria-describedby="qr-privacy">
+          <Download aria-hidden="true" />
+          {t("saveQr")}
+        </Button>
+      </div>
+      <p id="qr-privacy" className="mt-3 text-xs text-muted-foreground">
+        {t("qrPrivacy")}
+      </p>
       <div className="mt-5 flex flex-col items-center gap-6 rounded-xl border border-border/60 bg-background/60 p-5 sm:flex-row">
-        <QRCodeSVG
+        <QRCodeCanvas
+          ref={qr}
           value={note.url}
-          size={176}
+          size={512}
           level="M"
           marginSize={4}
-          title="QR code for this note"
-          bgColor="var(--qr-background)"
-          fgColor="var(--qr-foreground)"
+          role="img"
+          aria-label={t("qrTitle")}
+          style={{ width: 176, height: 176 }}
           className="max-w-full shrink-0 rounded-lg"
         />
         <div className="space-y-3 text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">A dead drop. Anywhere.</p>
+          <p className="font-medium text-foreground">{t("qrHeading")}</p>
+          <p>{t("qrHelp")}</p>
           <p>
-            Scan with your recipient's camera. The QR contains the same private link, including its
-            key.
-          </p>
-          <p>
-            Expires{" "}
-            <time dateTime={note.expiresAt.toISOString()}>{note.expiresAt.toLocaleString()}</time>
-            {note.burnAfterRead ? ", or on the first authorized read." : "."}
+            {t("expires")}{" "}
+            <time dateTime={note.expiresAt.toISOString()}>{formatDate(note.expiresAt)}</time>
+            {note.burnAfterRead ? t("expiresOnce") : "."}
           </p>
           {note.hasPassphrase && (
             <p className="flex items-center gap-2 text-primary-glow">
-              <LockKeyhole className="size-4" aria-hidden="true" /> Passphrase protected
+              <LockKeyhole className="size-4" aria-hidden="true" /> {t("protected")}
             </p>
           )}
         </div>
@@ -127,16 +185,15 @@ export function NoteSuccess({
       {note.burnAfterRead && (
         <div className="mt-5 flex gap-3 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-warning-text">
           <TriangleAlert className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
-          <p>This link can only be opened once. Share it only with the intended recipient.</p>
+          <p>{t("onceWarning")}</p>
         </div>
       )}
       <p className="mt-5 text-xs leading-relaxed text-muted-foreground">
-        Keep this link before leaving. We cannot recover its key. Anyone with the complete link
-        {note.hasPassphrase ? " and passphrase" : ""} can open the note.
+        {t(note.hasPassphrase ? "keepProtectedLink" : "keepLink")}
       </p>
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <Button variant="ghost" onClick={onCreateAnother}>
-          <ArrowLeft aria-hidden="true" /> Create another note
+          <ArrowLeft aria-hidden="true" /> {t("createAnother")}
         </Button>
         <RevokeNoteDialog note={note} onRetired={setRetired} />
       </div>

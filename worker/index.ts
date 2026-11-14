@@ -1,4 +1,5 @@
-import { CreateNoteSchema, MAX_LIFETIME_MS, NOTE_ID, ReadNoteSchema } from "../shared/protocol";
+import { CreateNoteSchema, NOTE_ID, ReadNoteSchema } from "../shared/protocol";
+import { creationIdentity } from "./creation-recovery";
 import type { Env } from "./env";
 import { failure, json, readJson } from "./http";
 import { admitCreation, hasCreationLimiter } from "./creation-limit";
@@ -8,7 +9,6 @@ export { NoteCounter } from "./note-counter";
 export type { Env } from "./env";
 
 const METHODS = "GET, POST, DELETE, OPTIONS";
-const EXPIRY_CLOCK_TOLERANCE_MS = 5 * 60_000;
 
 function counter(env: Env): DurableObjectStub {
   return env.NOTE_COUNTER.get(env.NOTE_COUNTER.idFromName("created"));
@@ -49,31 +49,17 @@ async function route(request: Request, env: Env, context: ExecutionContext): Pro
     const parsed = CreateNoteSchema.safeParse(body.data);
     if (!parsed.success)
       return failure("INVALID_REQUEST", "The encrypted note envelope is invalid.", 400);
-    const now = Date.now();
-    const requestedExpiry = Date.parse(parsed.data.expiresAt);
-    const lifetime = requestedExpiry - now;
-    if (lifetime < 60_000 || lifetime > MAX_LIFETIME_MS + EXPIRY_CLOCK_TOLERANCE_MS) {
-      return failure(
-        "INVALID_REQUEST",
-        "Expiry must be between one minute and 30 days from now.",
-        400,
-      );
-    }
-    const envelope = {
-      ...parsed.data,
-      expiresAt: new Date(Math.min(requestedExpiry, now + MAX_LIFETIME_MS)).toISOString(),
-    };
-    const id = Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
-      byte.toString(16).padStart(2, "0"),
-    ).join("");
+    const identity = await creationIdentity(parsed.data);
+    if (!identity.ok) return failure(identity.error.code, identity.error.message, 409);
+    const id = identity.data;
     const response = await env.NOTE_VAULT.get(env.NOTE_VAULT.idFromName(id)).fetch(
       `https://vault/${id}`,
       {
         method: "PUT",
-        body: JSON.stringify(envelope),
+        body: JSON.stringify(parsed.data),
       },
     );
-    if (response.ok) {
+    if (response.status === 201) {
       context.waitUntil(
         counter(env)
           .fetch("https://counter/count", { method: "POST" })

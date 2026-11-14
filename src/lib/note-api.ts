@@ -23,6 +23,8 @@ const ErrorSchema = z.object({
       "INVALID_REQUEST",
       "TOO_LARGE",
       "RATE_LIMITED",
+      "CREATION_CONFLICT",
+      "CREATION_EXPIRED",
       "UNAVAILABLE",
     ]),
     message: z.string().max(300),

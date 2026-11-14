@@ -6,6 +6,7 @@ import { NoteStatus } from "@/components/NoteStatus";
 import { NoteReader } from "@/components/NoteReader";
 import { Button } from "@/components/ui/button";
 import { base64ToKey } from "@/lib/crypto";
+import { useI18n } from "@/lib/i18n";
 import { getNoteMetadata, readNote, type NoteData, type NoteMetadata } from "@/lib/notes";
 import type { Failure } from "../../shared/protocol";
 
@@ -32,21 +33,30 @@ type State =
   | { kind: "cleared"; burned: boolean };
 
 function NotePage() {
+  const { t, errorText, formatDate } = useI18n();
   const { id } = Route.useParams();
   const hash = useLocation({ select: (location) => location.hash });
   const [state, setState] = useState<State>({ kind: "loading" });
   const [passphrase, setPassphrase] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<Failure | null>(null);
   const [retry, setRetry] = useState(0);
   const generation = useRef(0);
+  const readyHeading = useRef<HTMLHeadingElement>(null);
+  const errorMessage = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (state.kind === "ready") readyHeading.current?.focus();
+  }, [state.kind]);
+  useEffect(() => {
+    if (error) errorMessage.current?.focus();
+  }, [error]);
 
   useEffect(() => {
     const current = ++generation.current;
     const controller = new AbortController();
     setState({ kind: "loading" });
     setPassphrase("");
-    setError("");
+    setError(null);
     setBusy(false);
     void (async () => {
       const result = await getNoteMetadata(id, controller.signal);
@@ -83,7 +93,7 @@ function NotePage() {
     if (state.kind !== "ready" || busy) return;
     const current = generation.current;
     setBusy(true);
-    setError("");
+    setError(null);
     const result = await readNote(
       id,
       state.encodedKey,
@@ -103,7 +113,7 @@ function NotePage() {
         "CRYPTO_UNAVAILABLE",
       ].includes(result.error.code)
     )
-      setError(result.error.message);
+      setError(result.error);
     else setState({ kind: "failed", error: result.error });
   }
 
@@ -129,17 +139,13 @@ function NotePage() {
     <Shell>
       {state.kind === "loading" && (
         <p role="status" className="py-20 text-center font-mono text-sm text-muted-foreground">
-          Checking the sealed note…
+          {t("checking")}
         </p>
       )}
       {state.kind === "failed" && (
         <NoteStatus
-          title={state.error.message}
-          description={
-            state.error.code === "DESTROYED"
-              ? "Its server copy is gone. Ask the sender for a new note if you still need it."
-              : undefined
-          }
+          title={errorText(state.error)}
+          description={state.error.code === "DESTROYED" ? t("destroyedHelp") : undefined}
           {...(["NETWORK", "UNAVAILABLE"].includes(state.error.code) && {
             retry: () => setRetry((value) => value + 1),
           })}
@@ -147,16 +153,8 @@ function NotePage() {
       )}
       {state.kind === "cleared" && (
         <NoteStatus
-          title={
-            state.burned
-              ? "This note has been permanently destroyed."
-              : "The note has been cleared from this screen."
-          }
-          description={
-            state.burned
-              ? "The server copy is gone and the displayed copy has been cleared."
-              : "The original link remains available until its expiry."
-          }
+          title={state.burned ? t("errorDestroyed") : t("clearedTitle")}
+          description={state.burned ? t("clearedBurned") : t("clearedTimed")}
         />
       )}
       {state.kind === "ready" && (
@@ -168,53 +166,58 @@ function NotePage() {
             <LockKeyhole className="size-8" aria-hidden="true" />
           </div>
           <p className="mt-6 font-mono text-xs uppercase tracking-widest text-primary-glow">
-            For your eyes only
+            {t("privateHeading")}
           </p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-            {state.metadata.burnAfterRead
-              ? "This is a one-time note."
-              : "A secret is waiting for you."}
+          <h1
+            ref={readyHeading}
+            tabIndex={-1}
+            className="mt-2 text-2xl font-semibold tracking-tight"
+          >
+            {state.metadata.burnAfterRead ? t("onceTitle") : t("readyTitle")}
           </h1>
-          {state.metadata.burnAfterRead ? (
+          {state.metadata.burnAfterRead && (
             <div className="mt-5 flex gap-3 rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning-text">
               <TriangleAlert className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
-              <p>
-                Once you read it, it will be permanently destroyed. Keep this page open until you
-                are finished.
-              </p>
+              <p>{t("readWarning")}</p>
             </div>
-          ) : (
-            <p className="mt-4 text-sm text-muted-foreground">
-              This note can be opened until {new Date(state.metadata.expiresAt).toLocaleString()}.
-            </p>
           )}
+          <p className="mt-4 text-sm text-muted-foreground">
+            {t("availableUntil", { time: formatDate(new Date(state.metadata.expiresAt)) })}
+          </p>
           {state.metadata.hasPassphrase && (
             <div className="mt-6">
               <label htmlFor="read-passphrase" className="block text-sm font-medium">
-                This note is passphrase-protected
+                {t("readPassphrase")}
               </label>
               <input
                 id="read-passphrase"
                 type="password"
                 autoComplete="off"
                 maxLength={1024}
-                autoFocus
                 value={passphrase}
                 disabled={busy}
                 onChange={(event) => setPassphrase(event.target.value)}
-                placeholder="Enter the passphrase"
+                placeholder={t("enterPassphrase")}
                 className="mt-3 w-full rounded-lg border bg-background p-3 font-mono text-sm"
-                aria-describedby="read-passphrase-help"
+                aria-describedby={
+                  error ? "read-passphrase-help read-error" : "read-passphrase-help"
+                }
                 aria-invalid={!!error}
               />
               <p id="read-passphrase-help" className="mt-2 text-xs text-muted-foreground">
-                A wrong passphrase will not destroy the note.
+                {t("wrongPassphraseHelp")}
               </p>
             </div>
           )}
           {error && (
-            <p role="alert" className="mt-4 text-sm leading-relaxed text-danger-text">
-              {error}
+            <p
+              id="read-error"
+              ref={errorMessage}
+              tabIndex={-1}
+              role="alert"
+              className="mt-4 text-sm leading-relaxed text-danger-text"
+            >
+              {errorText(error, "read")}
             </p>
           )}
           <Button
@@ -228,16 +231,10 @@ function NotePage() {
             ) : (
               <LockKeyhole aria-hidden="true" />
             )}
-            {busy
-              ? "Verifying and opening…"
-              : state.metadata.burnAfterRead
-                ? "Read and Destroy"
-                : "Read Note"}
+            {busy ? t("opening") : state.metadata.burnAfterRead ? t("readDestroy") : t("readNote")}
           </Button>
           <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-            {state.metadata.burnAfterRead
-              ? "Opening removes the server copy before delivery. If your connection fails during that step, the note may be lost."
-              : "Decryption happens in your browser. The server does not receive the key or passphrase."}
+            {state.metadata.burnAfterRead ? t("deliveryWarning") : t("readPrivacy")}
           </p>
         </form>
       )}

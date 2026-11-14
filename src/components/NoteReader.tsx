@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { EyeOff, Flame, Clock } from "lucide-react";
 import { Button } from "./ui/button";
 import type { NoteData } from "@/lib/notes";
+import { useI18n } from "@/lib/i18n";
 
 export function NoteReader({
   note,
@@ -13,6 +14,11 @@ export function NoteReader({
   onClear: () => void;
   onExpire: () => void;
 }) {
+  const { t, formatDate } = useI18n();
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    heading.current?.focus();
+  }, []);
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     function checkExpiry() {
@@ -45,25 +51,28 @@ export function NoteReader({
           <Clock className="size-5 shrink-0 text-primary-glow" aria-hidden="true" />
         )}
         <div>
-          <h1 className="font-semibold">
-            {note.burnAfterRead ? "The server copy has been destroyed." : "Your note is open."}
+          <h1 ref={heading} tabIndex={-1} className="font-semibold">
+            {t(note.burnAfterRead ? "serverDestroyed" : "noteOpen")}
           </h1>
           <p className="mt-1 text-muted-foreground">
             {note.burnAfterRead
-              ? "This is the only copy shown by this service. Keep this page open until you are finished."
-              : `Available until ${note.expiresAt.toLocaleString()}.`}
+              ? t("onlyCopy")
+              : t("availableUntil", { time: formatDate(note.expiresAt) })}
           </p>
         </div>
       </div>
       <article
-        aria-label="Decrypted note"
+        aria-label={t("decryptedNote")}
         className="prose-note min-w-0 rounded-2xl border bg-card p-6 sm:p-10"
       >
         <ReactMarkdown
           skipHtml
           components={{
             img: ({ alt }) => (
-              <span className="text-muted-foreground">[Image omitted{alt ? `: ${alt}` : ""}]</span>
+              <span className="text-muted-foreground">
+                [{t("imageOmitted")}
+                {alt ? `: ${alt}` : ""}]
+              </span>
             ),
             a: ({ href, children }) =>
               href && /^https?:\/\//i.test(href) ? (
@@ -84,11 +93,9 @@ export function NoteReader({
         </ReactMarkdown>
       </article>
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-        <p className="text-xs text-muted-foreground">
-          Decrypted here, in your browser. Images are not loaded.
-        </p>
+        <p className="text-xs text-muted-foreground">{t("readerPrivacy")}</p>
         <Button variant="outline" onClick={onClear}>
-          <EyeOff aria-hidden="true" /> Clear this screen
+          <EyeOff aria-hidden="true" /> {t("clearScreen")}
         </Button>
       </div>
     </section>

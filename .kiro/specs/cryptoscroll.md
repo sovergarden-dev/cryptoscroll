@@ -16,6 +16,9 @@ The target experience is a small, dark, accessible tool for people handing a tem
 - As a recipient, I want a wrong passphrase or wrong link key to leave the note intact so that I can retry.
 - As a user, I want no account and no saved drafts so that the application does not maintain an identity or plaintext note history.
 - As a sender, I want visible network failures so that I do not share a link before the encrypted note has been stored.
+- As a sender, I want an explicit retry of the same creation after a lost acknowledgement, without creating duplicates or persisting my key.
+- As a sender, I want to choose how long a one-time note waits unread, independently of its one-time access policy.
+- As a user, I want English/Vietnamese labels, accessible focus transitions, native sharing where supported and a locally saved QR image.
 
 ## Technical Requirements
 
@@ -48,6 +51,15 @@ The target experience is a small, dark, accessible tool for people handing a tem
 | `GET /api/health`          | Check actual KV and Durable Object access; return 503 if unavailable.                                                                       |
 
 All API responses use `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, and no-referrer. Writes require JSON. CORS accepts configured frontend origins only. Malformed IDs, unknown fields, unsupported methods, invalid dates, invalid encodings and oversized bodies fail before persistence. A storage miss while lifecycle state is active is a retryable service error, not a false claim that the note was destroyed.
+
+### Creation recovery and unread deadlines
+
+- Crypto version 1 and legacy envelopes remain supported. New clients optionally include `creationToken: { issuedAt, nonce }`, where `issuedAt` is an ISO timestamp and `nonce` is an independent random 16-byte lowercase hex value, never the link key or read token.
+- Recovery accepts a token at most ten minutes old, with at most five minutes of future clock skew. The entire token determines the note ID through domain-separated SHA-256 truncated to 16 bytes. Changing its timestamp changes the ID; unchanged stale tokens are rejected before storage access even after tombstone cleanup.
+- The per-note Durable Object stores a fingerprint of the canonical original envelope and a pending state before writing ciphertext. Only the identical envelope can resume pending work. An active replay returns the same `{ id, expiresAt }` with HTTP 200 and does not increment the aggregate count; first completion returns 201. Conflicts return `CREATION_CONFLICT` (409); an invalid recovery window returns `CREATION_EXPIRED` (409). Retired notes remain retired. Pending metadata/reads are unavailable until activation; expiry cleans pending ciphertext too.
+- The browser retains the exact prepared encrypted envelope and link key in transient component state. Retry requires an explicit click and never changes the token, encryption key, IV, ciphertext or deadline. Plaintext and passphrase fields clear after preparation. Discard/reload/leaving loses the pending attempt and cannot promise deletion of a stored copy. Read operations are never automatically retried.
+- One-time notes in the UI offer unread deadlines of 1h, 24h, 72h, 7d and 30d, default 24h. Legacy helper calls without a selected unread deadline preserve the old 30-day default; existing stored notes do not change. Both request-time expiry and alarms enforce the authoritative stored deadline.
+- Deploy the compatible API before a frontend that sends the optional token. See the [recovery decision](../../docs/research/creation-recovery.md) for crash boundaries and rejected alternatives.
 
 ### Passphrase (optional layer)
 
@@ -110,5 +122,7 @@ Do not render raw HTML or automatically load Markdown images: an image can phone
 - Expired notes return no ciphertext; timed notes can be reread before expiry.
 - Property tests exercise UTF-8 roundtrips, key serialization, wrong keys, tampering, fresh IV samples and passphrase layers. A finite random sample is not a proof of universal nonce uniqueness.
 - Success view includes a locally generated QR code containing the exact share URL and accessible clipboard feedback.
+- Native sharing receives only the complete capability URL after a user action; cancellation is benign and copy remains available. A downloaded local PNG must independently decode to the same URL, including its fragment.
+- Switching language changes labels and the document language without changing note state, keys, URLs or storage. Warning, successful read and cleared-state transitions move keyboard focus to the relevant heading; failures are announced. Real TalkBack/VoiceOver and OS share results remain separate from automated tests.
 - Build, frontend/Worker typechecks, tests, security/compliance hooks and real browser checks pass before commit/push.
 - Kiro usage claims are supported by real sessions. Prepared files alone do not establish hackathon eligibility.

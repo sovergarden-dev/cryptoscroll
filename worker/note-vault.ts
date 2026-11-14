@@ -1,6 +1,8 @@
 import { equalProofs, hashProof } from "../shared/encoding";
 import {
   TOMBSTONE_MS,
+  MAX_LIFETIME_MS,
+  CLOCK_TOLERANCE_MS,
   type CreateNoteRequest,
   type NoteMetadata,
   type ReadNoteRequest,
@@ -8,15 +10,20 @@ import {
 } from "../shared/protocol";
 import type { Env } from "./env";
 import { failure, json } from "./http";
+import { fingerprintCreation } from "./creation-recovery";
 
-type ActiveNote = Omit<CreateNoteRequest, "ciphertext" | "iv"> & { kind: "active"; id: string };
+type StoredProperties = Omit<CreateNoteRequest, "ciphertext" | "iv" | "creationToken"> & {
+  id: string;
+  requestHash?: string;
+};
+type ActiveNote = StoredProperties & { kind: "active" };
+type PendingNote = StoredProperties & { kind: "pending"; requestHash: string };
 type RetiredNote = {
-  kind: "destroyed" | "expired";
   id: string;
   forgetAt: number;
   kvDeleted: boolean;
-};
-type NoteState = ActiveNote | RetiredNote;
+} & ({ kind: "destroyed" } | { kind: "expired" });
+type NoteState = ActiveNote | PendingNote | RetiredNote;
 
 function metadata(note: ActiveNote): NoteMetadata {
   return {
@@ -42,24 +49,17 @@ export class NoteVault implements DurableObject {
   private async handle(request: Request): Promise<Response> {
     const note = await this.state.storage.get<NoteState>("note");
     if (request.method === "PUT") {
-      if (note) return failure("INVALID_REQUEST", "The note ID is already in use.", 409);
-      const id = new URL(request.url).pathname.slice(1);
-      const { ciphertext, iv, ...properties } = await request.json<CreateNoteRequest>();
-      const active: ActiveNote = { ...properties, kind: "active", id };
-      await this.state.storage.setAlarm(Date.parse(active.expiresAt));
-      await this.env.NOTES_KV.put(id, JSON.stringify({ ciphertext, iv }), {
-        expiration: Math.ceil(Date.parse(active.expiresAt) / 1000),
-      });
-      await this.state.storage.put("note", active);
-      return json({ id, expiresAt: active.expiresAt }, 201);
+      return this.create(request, note);
     }
 
     if (!note) return failure("NOT_FOUND", "This note doesn't exist or was already read.", 404);
-    if (note.kind !== "active") return this.gone(note.kind);
+    if (note.kind === "destroyed" || note.kind === "expired") return this.gone(note.kind);
     if (Date.parse(note.expiresAt) <= Date.now()) {
       await this.retire(note, "expired");
       return this.gone("expired");
     }
+    if (note.kind === "pending")
+      return failure("UNAVAILABLE", "Note creation has not completed.", 503);
     if (request.method === "GET") return json(metadata(note));
 
     const proof = await request.json<ReadNoteRequest>();
@@ -100,7 +100,56 @@ export class NoteVault implements DurableObject {
       : failure("DESTROYED", "This note has been permanently destroyed.", 410);
   }
 
-  private async retire(note: ActiveNote, kind: RetiredNote["kind"]): Promise<void> {
+  private async create(request: Request, note: NoteState | undefined): Promise<Response> {
+    if (note?.kind === "destroyed" || note?.kind === "expired") return this.gone(note.kind);
+    if (note && Date.parse(note.expiresAt) <= Date.now()) {
+      await this.retire(note, "expired");
+      return this.gone("expired");
+    }
+    const envelope = await request.json<CreateNoteRequest>();
+    const requestHash = await fingerprintCreation(envelope);
+    if (note && (!envelope.creationToken || note.requestHash !== requestHash))
+      return failure(
+        "CREATION_CONFLICT",
+        "This creation token belongs to a different encrypted envelope.",
+        409,
+      );
+    if (note?.kind === "active") return json({ id: note.id, expiresAt: note.expiresAt });
+    let pending = note;
+    if (!pending) {
+      const now = Date.now();
+      const requestedExpiry = Date.parse(envelope.expiresAt);
+      const lifetime = requestedExpiry - now;
+      if (lifetime < 60_000 || lifetime > MAX_LIFETIME_MS + CLOCK_TOLERANCE_MS)
+        return failure(
+          "INVALID_REQUEST",
+          "Expiry must be between one minute and 30 days from now.",
+          400,
+        );
+      const { ciphertext: _ciphertext, iv: _iv, creationToken: _token, ...properties } = envelope;
+      pending = {
+        ...properties,
+        kind: "pending",
+        id: new URL(request.url).pathname.slice(1),
+        requestHash,
+        expiresAt: new Date(Math.min(requestedExpiry, now + MAX_LIFETIME_MS)).toISOString(),
+      };
+      await this.state.storage.setAlarm(Date.parse(pending.expiresAt));
+      await this.state.storage.put("note", pending);
+      await this.state.storage.sync();
+    }
+    await this.env.NOTES_KV.put(
+      pending.id,
+      JSON.stringify({ ciphertext: envelope.ciphertext, iv: envelope.iv }),
+      {
+        expiration: Math.ceil(Date.parse(pending.expiresAt) / 1000),
+      },
+    );
+    await this.state.storage.put("note", { ...pending, kind: "active" });
+    return json({ id: pending.id, expiresAt: pending.expiresAt }, 201);
+  }
+
+  private async retire(note: ActiveNote | PendingNote, kind: RetiredNote["kind"]): Promise<void> {
     const retired: RetiredNote = {
       kind,
       id: note.id,
@@ -129,7 +178,7 @@ export class NoteVault implements DurableObject {
     await this.state.blockConcurrencyWhile(async () => {
       const note = await this.state.storage.get<NoteState>("note");
       if (!note) return;
-      if (note.kind === "active") {
+      if (note.kind === "active" || note.kind === "pending") {
         if (Date.parse(note.expiresAt) <= Date.now()) await this.retire(note, "expired");
         else await this.state.storage.setAlarm(Date.parse(note.expiresAt));
       } else {

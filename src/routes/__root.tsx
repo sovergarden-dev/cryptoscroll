@@ -10,32 +10,31 @@ import {
 import { type ReactNode } from "react";
 import { Shell } from "../components/Shell";
 import { NoteStatus } from "../components/NoteStatus";
+import { LanguageProvider } from "../components/LanguageProvider";
+import { useI18n } from "../lib/i18n";
 
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
+  const { t } = useI18n();
   return (
     <Shell>
-      <NoteStatus
-        title="These are not the scrolls you're looking for."
-        description="404. This passage leads nowhere. Start a new note to find your way back."
-      />
+      <NoteStatus title={t("notFoundTitle")} description={t("notFoundBody")} />
     </Shell>
   );
 }
 
 function ErrorComponent({ reset }: ErrorComponentProps) {
   const router = useRouter();
+  const { t } = useI18n();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+          {t("pageErrorTitle")}
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">{t("pageErrorBody")}</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
@@ -44,13 +43,13 @@ function ErrorComponent({ reset }: ErrorComponentProps) {
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            {t("tryAgain")}
           </button>
           <a
             href="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Go home
+            {t("home")}
           </a>
         </div>
       </div>
@@ -92,7 +91,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
+        <LanguageProvider>{children}</LanguageProvider>
         <Scripts />
       </body>
     </html>
