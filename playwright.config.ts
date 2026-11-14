@@ -12,16 +12,11 @@ export default defineConfig({
     { name: "chromium", testIgnore: "**/accessibility.spec.ts", use: { browserName: "chromium" } },
     { name: "firefox", testIgnore: "**/accessibility.spec.ts", use: { browserName: "firefox" } },
     { name: "webkit", testIgnore: "**/accessibility.spec.ts", use: { browserName: "webkit" } },
-    // Windows axe/Firefox crashes are recorded in docs/ref/product-followup-verification.md; Linux CI still runs that audit.
-    ...(process.platform === "win32"
-      ? []
-      : [
-          {
-            name: "accessibility-firefox",
-            testMatch: "**/accessibility.spec.ts",
-            use: { browserName: "firefox" as const },
-          },
-        ]),
+    {
+      name: "accessibility-firefox",
+      testMatch: "**/accessibility.spec.ts",
+      use: { browserName: "firefox" },
+    },
     {
       name: "accessibility-chromium",
       testMatch: "**/accessibility.spec.ts",

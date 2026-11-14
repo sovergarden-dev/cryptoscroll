@@ -24,6 +24,7 @@
 
 ### Fixed
 
+- Pin Playwright to the last working 1.64.1 release for the upstream Firefox ARIA-reflection regression; retain native application labels and restore Firefox accessibility audits on every platform.
 - Refresh the aggregate note count within the same session and recover after transient count failures.
 - Focus warning, sealed, read and cleared states; translate errors by stable codes while preserving uncertain-read/revocation warnings.
 - Increase editor placeholder contrast and verify modal keyboard containment where automated scans require manual review.

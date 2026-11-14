@@ -22,6 +22,9 @@ test("shares a protected one-time note across isolated desktop and mobile viewpo
   await expect(
     page.getByRole("heading", { name: /Write once\..*Read once\..*Vanish\./ }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: /Write once\.\s*Read once\.\s*Vanish\./ }),
+  ).toBeVisible();
   await expect(page.getByLabel("Your secret note")).toBeEnabled();
   await page.screenshot({ path: testInfo.outputPath("home-desktop.png"), fullPage: true });
   const secret =
@@ -32,6 +35,9 @@ test("shares a protected one-time note across isolated desktop and mobile viewpo
   await page.getByLabel("Passphrase", { exact: true }).fill(passphrase);
   await page.getByRole("button", { name: "Create Note", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Your scroll is sealed." })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Your scroll is sealed.", exact: true }),
+  ).toBeVisible();
   const url = await page.getByLabel("Your private link").inputValue();
   const parsed = new URL(url);
   expect(parsed.hash).toMatch(/^#[A-Za-z0-9_-]{43}$/);
@@ -237,7 +243,7 @@ test("revokes a protected note only after confirmation and a correct passphrase"
   const trigger = page.getByRole("button", { name: "Revoke note", exact: true });
   await expect(trigger).toBeVisible({ timeout: 5000 });
   await trigger.click();
-  const confirmation = page.getByRole("alertdialog");
+  const confirmation = page.getByRole("alertdialog", { name: "Revoke this note?", exact: true });
   await expect(confirmation.getByRole("button", { name: "Keep note" })).toBeFocused();
   for (const key of ["Tab", "Tab", "Tab", "Shift+Tab", "Shift+Tab", "Shift+Tab"]) {
     await page.keyboard.press(key);

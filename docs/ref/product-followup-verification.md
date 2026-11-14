@@ -36,10 +36,14 @@ The first fault-injection test exposed buffered pending-state loss when the obje
 3. Complete the [new physical-device checks](device-acceptance.md#follow-up-build-pending-physical-acceptance), especially native sharing, downloaded PNGs and TalkBack/VoiceOver.
 4. Engage a named external reviewer with the [review brief](security-review-brief.md) before claiming independent review.
 
-## Known scanner limitation
+## Firefox scanner regression and tooling pin
 
 The first full matrix passed 20/21 scenarios. Firefox repeatedly reported `frame.evaluate: Page crashed` when axe analyzed the styled application. It also reproduced in an isolated run, legacy axe mode, disjoint rule groups, with CSP bypassed in a diagnostic context, and with the previous axe-core 4.13.0. A minimal plain-HTML fixture passed. No native crash cause has been established; do not attribute this to a specific browser/CSP/CSS defect without more evidence.
 
-Functional and focus/locale tests remain enabled on Chromium, Firefox and WebKit. Automated axe checks are separate projects with the full WCAG 2 A/AA, 2.1 AA and 2.2 AA tag sets; no rules are disabled and CSP remains enforced. Windows runs Chromium/WebKit audits; non-Windows environments, including the existing Linux CI, also retain a Firefox audit gate. That Linux gate has not yet been run for this unpublished change. The Windows Firefox scanner integration is unverified, not a passing scan or a waived accessibility requirement. Real TalkBack/VoiceOver acceptance remains open.
+The first Linux CI run at `1293b2e` reproduced the same failure: [run 43582679479](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/43582679479) passed 23 browser scenarios and failed only the Firefox audit. Earlier head `bf18c0d` also failed. No merge or deployment followed those failures.
+
+Further controls isolated ARIA label references, not styles or heading text. A minimal unchanged page crashed when a role lookup preceded axe, but passed with a CSS-only lookup. This matches [Mozilla bug 2090055](https://bugzilla.mozilla.org/show_bug.cgi?id=2090055) and [Playwright regression 43967](https://github.com/microsoft/playwright/issues/43967): the browser crashes when two JavaScript worlds read the same reflected ARIA element list. CSS-only interactions were insufficient for the full multi-state audit. Experimental product label changes and harness workarounds were discarded.
+
+Playwright is pinned to its last-working stable 1.64.1. Version 1.65.1 still packages Firefox revision 1572, so that patch release does not provide a fixed browser. The original production ARIA references, semantic locators, rule set, CSP, timeouts and assertions remain intact. Explicit region/dialog name assertions were added, and Firefox audits are enabled on Windows as well as Linux. The unchanged seven-state Firefox audit passed locally with 1.64.1; full CI at the corrective commit remains required. Upgrade the pin only after a release carrying the upstream fix passes the same audit and functional matrix. Real TalkBack/VoiceOver acceptance remains open.
 
 Original failure evidence is retained locally in `.local-qa/followup-first-firefox-crash/` and `.local-qa/followup-firefox-diagnostic.log`; further diagnostic fixtures are ignored under `.local-qa/`. The final matrix is recorded separately from the initial failure.
