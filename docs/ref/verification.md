@@ -1,5 +1,7 @@
 # Local verification
 
+Historical record of the initial implementation and API correction. Current published evidence is in [hardening verification](hardening-verification.md) and [device acceptance](device-acceptance.md); newer, unpublished changes are recorded in [follow-up verification](product-followup-verification.md). Counts and initial failures below describe their original stage.
+
 Verified during 2026-11-13–14 on Windows, using Node 22.22.0, npm 11.18.0, Wrangler 4.161.0 and Chromium 158. The source baseline was `c2c5690`; implementation commit `3d528c1` passed [GitHub CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/43474649977). The initial source-delivery evidence below predates provisioning. Later production checks are recorded separately in [deployment acceptance](deployment.md); neither record proves a completed hackathon entry.
 
 | Check                                    | Result                                                                                                                                                          |
@@ -33,7 +35,7 @@ The frontend's generated Wrangler redirect initially conflicted with commands in
 
 The service's persistent format is new; the baseline had no server database to migrate. The versioned Durable Object migration creates two new classes. Existing browser-only notes were neither uploaded nor deleted. At this initial local-verification stage, deployment still required a real KV namespace and an authorized account; the placeholder has since been replaced during [production deployment](deployment.md).
 
-At initial source delivery, production routing/storage were unverified and Cloudflare authorization lacked Workers/KV/Routes scopes. These API prerequisites were subsequently resolved. Physical-device behavior, native clipboard permissions, actual Kiro hook execution and a public video remain unverified. GitHub CI repeats local commands on Linux after source publication; its run is the source of truth for CI status. See [submission status](submission.md) for the current outstanding external steps.
+At initial source delivery, production routing/storage were unverified and Cloudflare authorization lacked Workers/KV/Routes scopes. These API prerequisites were subsequently resolved. Physical-device behavior and native clipboard checks were unverified at that stage; the owner subsequently reported the requested hardening checks passed on Android and iPhone/iPad on 2026-11-14. Actual Kiro hook execution and a public video remain unverified and deferred. GitHub CI repeats local commands on Linux after source publication; its run is the source of truth for CI status. See [submission status](submission.md) for external evidence.
 
 ## Initial source-delivery review
 
