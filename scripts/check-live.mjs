@@ -39,7 +39,7 @@ export async function checkLive(targets) {
   const result = { ok: false, checkedAt: new Date().toISOString(), stage: "frontend" };
   try {
     const frontend = await read(targets.frontend);
-    await frontend.body?.cancel();
+    const html = await frontend.text();
     result.frontendStatus = frontend.status;
     if (frontend.status !== 200 || !frontend.headers.get("content-type")?.includes("text/html"))
       return result;
@@ -54,8 +54,15 @@ export async function checkLive(targets) {
     const nonce = scripts.find((value) => /^'nonce-[A-Za-z0-9+/=]{24,}'$/.test(value));
     const connections = directives.get("connect-src") ?? [];
     result.stage = "frontend-policy";
+    const metaReferrer = (html.match(/<meta\b[^>]*>/gi) ?? []).some(
+      (tag) =>
+        /\sname\s*=\s*["']referrer["']/i.test(tag) &&
+        /\scontent\s*=\s*["']no-referrer["']/i.test(tag),
+    );
+    const noReferrer = frontend.headers.get("referrer-policy") === "no-referrer" || metaReferrer;
     if (
       !nonce ||
+      !noReferrer ||
       scripts.includes("'unsafe-inline'") ||
       scripts.includes("'unsafe-eval'") ||
       !(
@@ -64,6 +71,7 @@ export async function checkLive(targets) {
       )
     )
       return result;
+    result.documentNoReferrer = true;
     const second = await read(targets.frontend);
     await second.body?.cancel();
     const nextPolicy = second.headers.get("content-security-policy") ?? "";
