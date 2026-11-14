@@ -1,6 +1,6 @@
 # Physical-device acceptance
 
-Status: pending. The owner has confirmed access to Android and iPhone/iPad. Run these checks after the hardening build is published; browser automation and viewport screenshots are not physical-device evidence.
+Status: the owner reported that the published hardening build passed on both Android and iPhone/iPad on 2026-11-14. This is owner-reported physical-device evidence, distinct from browser-engine automation. Device models, OS/browser versions and private-mode results were not separately supplied.
 
 Use synthetic text only, for example `Device check — tiếng Việt 🔐`. Record the device, OS version, browser/version, date and outcome. No passwords, complete private links or authentication tokens belong in this record.
 
@@ -14,9 +14,9 @@ Use synthetic text only, for example `Device check — tiếng Việt 🔐`. Rec
 
 ## Results
 
-| Device / browser            | QR      | Clipboard | Wrong proof / one-time read | Timed read / revoke | Navigation / layout | Date / evidence |
-| --------------------------- | ------- | --------- | --------------------------- | ------------------- | ------------------- | --------------- |
-| Android — owner to fill     | Pending | Pending   | Pending                     | Pending             | Pending             | Pending         |
-| iPhone/iPad — owner to fill | Pending | Pending   | Pending                     | Pending             | Pending             | Pending         |
+| Device / browser                   | QR                 | Clipboard          | Wrong proof / one-time read | Timed read / revoke | Navigation / layout                                              | Date / evidence                        |
+| ---------------------------------- | ------------------ | ------------------ | --------------------------- | ------------------- | ---------------------------------------------------------------- | -------------------------------------- |
+| Android — version not supplied     | Pass, owner report | Pass, owner report | Pass, owner report          | Pass, owner report  | Pass for requested back-navigation, rotation and keyboard checks | 2026-11-14, owner confirmation in chat |
+| iPhone/iPad — version not supplied | Pass, owner report | Pass, owner report | Pass, owner report          | Pass, owner report  | Pass for requested back-navigation, rotation and keyboard checks | 2026-11-14, owner confirmation in chat |
 
 After testing, revoke any timed synthetic notes using the sender's sharing screen. If that screen was closed, note their expiry and do not treat them as cleaned up before they expire or authenticated revocation succeeds.

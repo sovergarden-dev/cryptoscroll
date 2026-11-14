@@ -14,7 +14,7 @@ The configured limit is an initial estimate of 30 creation attempts per minute p
 npm run check:live -- --frontend https://cryptoscroll.syrin.online/ --api https://cryptoscroll-worker.thongdocnganhang1.workers.dev/api
 ```
 
-This checks HTTPS frontend availability, fresh CSP nonces, the expected API connection allowance, real backend health and CORS preflight. It does not create a note, retrieve note ciphertext or read user data. Output contains only timestamps, stages, status codes and booleans. It also rejects redirects; a login or hosting challenge is a failed availability check, not silently treated as application success.
+This checks HTTPS frontend availability, fresh CSP nonces, the expected API connection allowance, a no-referrer document policy, real backend health and CORS preflight. It does not create a note, retrieve note ciphertext or read user data. Output contains only timestamps, stages, status codes and booleans. It also rejects redirects; a login or hosting challenge is a failed availability check, not silently treated as application success.
 
 A regular monitor should run only this command, stay quiet while healthy, and notify on a confirmed failure or recovery. When a failure is first observed, repeat the read-only check once before reporting it. Do not include response bodies or private URLs in alerts. Runtime/provider request metadata is outside these application checks; Worker observability is deliberately disabled, and frontend error messages are content-free.
 

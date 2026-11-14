@@ -2,6 +2,8 @@
 
 Started: 2026-11-13. Baseline: `c2c5690` on public `sovergarden-dev/cryptoscroll`.
 
+This file records the initial implementation checkpoint. Subsequent website hardening is complete in [the hardening record](done/hardening.md); the owner has deferred Kiro and hackathon submission work.
+
 Status on 2026-11-14: implementation, local acceptance and production deployment are complete; [verification](../ref/verification.md) records the results. Runtime source commit `bbbf4ca` was pushed and passed GitHub CI. The API and republished Lovable frontend passed live synthetic-note checks, including wrong-passphrase preservation and rejection after the one-time read. [Deployment acceptance](../ref/deployment.md) records the scope separately from genuine Kiro/video/entry evidence in [submission status](../ref/submission.md).
 
 Execute the owner's eight tasks in order. The [product spec](../../.kiro/specs/cryptoscroll.md) is the acceptance contract; [atomic-read research](../research/atomic-read.md) explains corrections to unsafe sample code.

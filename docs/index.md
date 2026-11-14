@@ -10,5 +10,7 @@
 - [Physical-device acceptance](ref/device-acceptance.md)
 - [Service operations and post-publication checks](ref/operations.md)
 - [Creation admission and privacy tradeoffs](research/creation-admission.md)
-- [Hardening work in progress](plan/hardening.md)
+- [Completed hardening work](plan/done/hardening.md)
+- [Hardening verification](ref/hardening-verification.md)
+- [Proposed product follow-ups](plan/product-followups.md)
 - [Setup and security overview](../README.md)

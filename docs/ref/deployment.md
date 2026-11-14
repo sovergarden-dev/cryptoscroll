@@ -6,9 +6,10 @@ Updated 2026-11-14. All live checks below used disposable synthetic notes; no ex
 
 - Frontend: [cryptoscroll.syrin.online](https://cryptoscroll.syrin.online), published through the connected [Lovable project](https://lovable.dev/projects/0548ff0a-7c6c-49cf-8e02-f78abea146d9).
 - API: [cryptoscroll-worker.thongdocnganhang1.workers.dev/api](https://cryptoscroll-worker.thongdocnganhang1.workers.dev/api/health).
-- Cloudflare bindings: `NOTES_KV`, `NOTE_VAULT` and `NOTE_COUNTER`. The real account and namespace IDs are in `worker/wrangler.toml`; OAuth credentials are not in the repository.
+- Cloudflare bindings: `NOTES_KV`, `NOTE_VAULT`, `NOTE_COUNTER` and `CREATION_LIMITER`. `CREATION_LIMIT_SALT` is provisioned as a Worker secret. Account/namespace IDs are in `worker/wrangler.toml`; credential and secret values are not in the repository.
 - Initial API version: `4ff79d80-b6ce-475c-a902-bce122212174`.
-- Current API version after updating the frontend/preview origin allowlist: `141e42e1-a737-42eb-b0b5-2b2e76697c09`.
+- Previous API version after updating the frontend/preview origin allowlist: `141e42e1-a737-42eb-b0b5-2b2e76697c09`.
+- Current hardened API version: `c477817a-6ff5-4edd-a8de-e100c63db795`, deployed from the implementation merged through [PR #1](https://github.com/sovergarden-dev/cryptoscroll/pull/1).
 
 The main domain currently resolves directly to Lovable. A Cloudflare Worker route requires a [proxied DNS record](https://developers.cloudflare.com/workers/configuration/routing/routes/), so `/api` on that host is not the active backend. Hosted frontend builds use the dedicated Worker endpoint. Local loopback development retains the `/api` proxy; `VITE_API_URL` overrides either default. Shared note links retain the frontend origin and fragment-only key.
 
@@ -38,6 +39,16 @@ The corrected source passed 35 unit/integration tests, both local browser scenar
 - Reloading the consumed link showed the permanently destroyed state.
 - A one-hour note decrypted on its first opening and again after reloading and explicitly reopening it.
 
-The production checks used separate tabs in one browser session; the local browser suite additionally covered independent storage contexts and mobile dimensions. Native clipboard permissions and physical-device behavior remain separate manual checks. Captures of the live reader and destroyed state contain synthetic text only and are retained with this task's local QA artifacts.
+The initial production checks used separate tabs in one browser session; the local browser suite additionally covered independent storage contexts and mobile dimensions. At that stage, native clipboard permissions and physical-device behavior were not yet confirmed. Later hardening acceptance is recorded below. Captures contain synthetic text only and are retained with this task's local QA artifacts.
 
-Actual Kiro usage, a public demo video and a Devpost entry remain outstanding in the [submission record](submission.md).
+Actual Kiro usage, a public demo video and a Devpost entry are deferred by the owner in the [submission record](submission.md).
+
+## Hardening publication
+
+The owner published source `aaecd33` through Lovable on 2026-11-14. Its [main CI run](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/43558188756) passed, following the successful [PR run](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/43557342853).
+
+The live read-only checker passed frontend status, fresh CSP nonces, API connection allowance, backend health and CORS preflight. The opted-in live smoke passed protected-note decryption, wrong-proof preservation, twelve concurrent reads with one success, timed rereading and revocation. Its synthetic notes were consumed or revoked.
+
+The actual published revocation UI was also exercised: cancellation kept the note available, a wrong passphrase showed an error, the correct passphrase returned the revoked state with keyboard focus on its heading, and the recipient link then showed the destroyed state. This additional synthetic browser note was revoked.
+
+The owner subsequently confirmed the requested QR, clipboard, protected-read, timed-read, revoke and navigation/layout checks on Android and iPhone/iPad. See [device acceptance](device-acceptance.md) for the evidence scope. An hourly read-only Codex heartbeat named `Theo dõi CryptoScroll` is active, reporting only confirmed meaningful state changes. It does not create, consume or delete notes. Checks and recovery are described in [operations](operations.md).
