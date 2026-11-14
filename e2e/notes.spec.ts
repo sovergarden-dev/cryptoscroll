@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures";
 
-test("shares a protected one-time note across isolated desktop and mobile browsers", async ({
+test("shares a protected one-time note across isolated desktop and mobile viewports", async ({
   page,
   browser,
   appOrigin,
@@ -22,6 +22,7 @@ test("shares a protected one-time note across isolated desktop and mobile browse
   await expect(
     page.getByRole("heading", { name: /Write once\..*Read once\..*Vanish\./ }),
   ).toBeVisible();
+  await expect(page.getByLabel("Your secret note")).toBeEnabled();
   await page.screenshot({ path: testInfo.outputPath("home-desktop.png"), fullPage: true });
   const secret =
     "# A private handoff\n\nXin chào, recipient 🔐\n\n![tracking](https://tracking.invalid/pixel.png)\n\n<script>window.injected = true</script>";
@@ -51,7 +52,6 @@ test("shares a protected one-time note across isolated desktop and mobile browse
 
   const recipient = await browser.newContext({
     viewport: { width: 390, height: 844 },
-    isMobile: true,
     deviceScaleFactor: 1,
   });
   try {
@@ -126,7 +126,7 @@ test("supports timed rereads, missing keys, network recovery, reduced motion and
   await page.setViewportSize({ width: 375, height: 812 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await expect(page.getByLabel("Your secret note")).toBeVisible();
+  await expect(page.getByLabel("Your secret note")).toBeEnabled();
   await page.screenshot({ path: testInfo.outputPath("home-mobile.png"), fullPage: true });
   expect(
     await page
@@ -168,4 +168,120 @@ test("supports timed rereads, missing keys, network recovery, reduced motion and
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
+});
+
+test("enforces fresh production script nonces while the editor hydrates", async ({
+  page,
+  appOrigin,
+}) => {
+  await page.route(`${appOrigin}/`, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.text()).replace(
+      "</head>",
+      '<script id="untrusted-fixture">window.__untrustedScriptExecuted = true</script></head>',
+    );
+    await route.fulfill({ response, body });
+  });
+  const response = await page.goto("/");
+  const policy = response!.headers()["content-security-policy"] ?? "";
+  const nonce = policy.match(/'nonce-([^']+)'/)?.[1];
+  expect(nonce).toMatch(/^[A-Za-z0-9+/=]{24,}$/);
+  expect(policy).not.toContain("'unsafe-eval'");
+  await expect(page.getByLabel("Your secret note")).toBeEnabled();
+  const scriptNonces = await page
+    .locator("script:not(#untrusted-fixture)")
+    .evaluateAll((scripts) =>
+      scripts
+        .filter(
+          (script): script is HTMLScriptElement =>
+            script instanceof HTMLScriptElement &&
+            (!script.type || script.type === "module" || script.type === "text/javascript"),
+        )
+        .map((script) => script.nonce),
+    );
+  expect(scriptNonces.length).toBeGreaterThan(0);
+  expect(scriptNonces.every((value) => value === nonce)).toBe(true);
+  expect(
+    await page.evaluate(
+      () => (window as unknown as Record<string, unknown>)["__untrustedScriptExecuted"],
+    ),
+  ).toBeUndefined();
+  const second = await page.request.get("/");
+  const secondNonce = second.headers()["content-security-policy"]?.match(/'nonce-([^']+)'/)?.[1];
+  expect(secondNonce).toMatch(/^[A-Za-z0-9+/=]{24,}$/);
+  expect(secondNonce).not.toBe(nonce);
+});
+
+test("revokes a protected note only after confirmation and a correct passphrase", async ({
+  page,
+  appOrigin,
+  browser,
+}) => {
+  const passphrase = "A separate revocation fixture phrase";
+  const requests: string[] = [];
+  page.on("request", (request) =>
+    requests.push(
+      JSON.stringify({
+        method: request.method(),
+        url: request.url(),
+        headers: request.headers(),
+        body: request.postData(),
+      }),
+    ),
+  );
+  await page.goto("/");
+  await page.getByLabel("Your secret note").fill("A disposable protected note for revocation.");
+  await page.getByText("1h", { exact: true }).click();
+  await page.getByRole("button", { name: "Add a passphrase Optional" }).click();
+  await page.getByLabel("Passphrase", { exact: true }).fill(passphrase);
+  await page.getByRole("button", { name: "Create Note", exact: true }).click();
+  const link = page.getByLabel("Your private link");
+  await expect(link).toBeVisible();
+  const privateUrl = await link.inputValue();
+  const parsed = new URL(privateUrl);
+  const endpoint = `${appOrigin}/api/notes/${parsed.pathname.split("/").at(-1)}`;
+  const trigger = page.getByRole("button", { name: "Revoke note", exact: true });
+  await expect(trigger).toBeVisible({ timeout: 5000 });
+  await trigger.click();
+  const confirmation = page.getByRole("alertdialog");
+  await expect(confirmation.getByRole("button", { name: "Keep note" })).toBeFocused();
+  await confirmation.getByRole("button", { name: "Keep note" }).click();
+  await expect(confirmation).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+  expect((await page.request.get(endpoint)).status()).toBe(200);
+  await page.keyboard.press("Enter");
+  await confirmation.getByLabel("Passphrase to revoke").fill("wrong fixture phrase");
+  await confirmation.getByRole("button", { name: "Revoke note", exact: true }).click();
+  await expect(confirmation.getByRole("alert")).toContainText("Wrong passphrase");
+  expect((await page.request.get(endpoint)).status()).toBe(200);
+  await page.route(endpoint, (route) =>
+    route.request().method() === "DELETE" ? route.abort("internetdisconnected") : route.continue(),
+  );
+  await confirmation.getByLabel("Passphrase to revoke").fill(passphrase);
+  await confirmation.getByRole("button", { name: "Revoke note", exact: true }).click();
+  await expect(confirmation.getByRole("alert")).toContainText("could not be confirmed");
+  await expect(page.getByRole("heading", { name: "Note revoked.", exact: true })).toHaveCount(0);
+  await page.unroute(endpoint);
+  await confirmation.getByLabel("Passphrase to revoke").fill(passphrase);
+  await confirmation.getByRole("button", { name: "Revoke note", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Note revoked.", exact: true })).toBeFocused();
+  await expect(link).toHaveCount(0);
+  expect((await page.request.get(endpoint)).status()).toBe(410);
+  expect(requests.some((request) => request.includes('/read"'))).toBe(false);
+  for (const request of requests) {
+    expect(request).not.toContain(passphrase);
+    expect(request).not.toContain(parsed.hash.slice(1));
+  }
+  const recipient = await browser.newContext();
+  try {
+    const note = await recipient.newPage();
+    await note.goto(privateUrl);
+    await expect(
+      note.getByRole("heading", { name: "This note has been permanently destroyed." }),
+    ).toBeVisible();
+  } finally {
+    await recipient.close();
+  }
+  await page.getByRole("button", { name: "Create another note" }).click();
+  await expect(page.getByLabel("Your secret note")).toHaveValue("");
 });

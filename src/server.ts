@@ -1,10 +1,11 @@
-import "./lib/error-capture";
-
-import { consumeLastCapturedError } from "./lib/error-capture";
+import "./lib/server-logging.server";
 import { renderErrorPage } from "./lib/error-page";
+import { createDocumentNonce, NONCE_HEADER, secureDocument } from "./lib/document-security.server";
+import type { Register } from "@tanstack/react-router";
+import type { RequestHandler } from "@tanstack/react-start/server";
 
 type ServerEntry = {
-  fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
+  fetch: RequestHandler<Register>;
 };
 
 let serverEntryPromise: Promise<ServerEntry> | undefined;
@@ -20,7 +21,10 @@ async function getServerEntry(): Promise<ServerEntry> {
 
 // h3 swallows in-handler throws into a normal 500 Response with body
 // {"unhandled":true,"message":"HTTPError"} — try/catch alone never fires for those.
-async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
+async function normalizeCatastrophicSsrResponse(
+  response: Response,
+  nonce: string,
+): Promise<Response> {
   if (response.status < 500) return response;
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) return response;
@@ -28,8 +32,8 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   const body = await response.clone().text();
   if (!isH3SwallowedErrorBody(body)) return response;
 
-  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
-  return new Response(renderErrorPage(), {
+  console.error();
+  return new Response(renderErrorPage(nonce), {
     status: 500,
     headers: { "content-type": "text/html; charset=utf-8" },
   });
@@ -44,21 +48,31 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
-// Hosting compresses every response at the edge. Never compress a body (gzip, brotli,
-// CompressionStream) or set content-encoding here or in a server route: the body gets encoded
-// twice and renders garbled.
+// Hosting compresses at the edge; compressing here would encode responses twice.
 export default {
-  async fetch(request: Request, env: unknown, ctx: unknown) {
+  async fetch(request, options) {
+    const nonce = createDocumentNonce();
+    const headers = new Headers(request.headers);
+    headers.set(NONCE_HEADER, nonce);
+    const securedRequest = new Request(request, { headers });
     try {
       const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      const response = await handler.fetch(securedRequest, options);
+      return secureDocument(
+        await normalizeCatastrophicSsrResponse(response, nonce),
+        request,
+        nonce,
+      );
     } catch (error) {
       console.error(error);
-      return new Response(renderErrorPage(), {
-        status: 500,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
+      return secureDocument(
+        new Response(renderErrorPage(nonce), {
+          status: 500,
+          headers: { "content-type": "text/html; charset=utf-8" },
+        }),
+        request,
+        nonce,
+      );
     }
   },
-};
+} satisfies ServerEntry;

@@ -88,6 +88,84 @@ afterAll(async () => {
 });
 
 describe("Cloudflare Worker with real KV and Durable Objects", () => {
+  it("denies excess creation before storage while existing reads remain authorized", async () => {
+    const limited = await createWorkerRuntime(false, "http://localhost:5173", { creationLimit: 1 });
+    try {
+      const fixture = await envelope(true);
+      const headers = { "Content-Type": "application/json", "CF-Connecting-IP": "203.0.113.10" };
+      const send = () =>
+        limited.dispatchFetch("https://cryptoscroll.test/api/notes", {
+          method: "POST",
+          headers,
+          body: JSON.stringify(fixture.body),
+        });
+      expect((await limited.dispatchFetch("https://cryptoscroll.test/api/health")).status).toBe(
+        200,
+      );
+      expect((await limited.dispatchFetch("https://cryptoscroll.test/api/health")).status).toBe(
+        200,
+      );
+      const first = await send();
+      expect(first.status).toBe(201);
+      const { id } = CreatedNoteSchema.parse(await first.json());
+      const denied = await send();
+      expect(denied.status).toBe(429);
+      expect(denied.headers.get("Retry-After")).toBe("60");
+      expect(await denied.json()).toMatchObject({ error: { code: "RATE_LIMITED" } });
+      const kv = await limited.getKVNamespace("NOTES_KV");
+      expect(
+        (await kv.list()).keys.filter((entry) => /^[a-f0-9]{32}$/.test(entry.name)),
+      ).toHaveLength(1);
+      const read = await limited.dispatchFetch(`https://cryptoscroll.test/api/notes/${id}/read`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(fixture.proof),
+      });
+      expect(read.status).toBe(200);
+      const otherNetwork = await limited.dispatchFetch("https://cryptoscroll.test/api/notes", {
+        method: "POST",
+        headers: { ...headers, "CF-Connecting-IP": "203.0.113.11" },
+        body: JSON.stringify(fixture.body),
+      });
+      expect(otherNetwork.status).toBe(201);
+    } finally {
+      await limited.dispose();
+    }
+  });
+
+  it("fails creation closed when admission is misconfigured without blocking stored notes", async () => {
+    const missing = await createWorkerRuntime(false, "http://localhost:5173", { creationSalt: "" });
+    try {
+      const fixture = await envelope(true);
+      const id = "d".repeat(32);
+      const namespace = await missing.getDurableObjectNamespace("NOTE_VAULT");
+      await namespace.get(namespace.idFromName(id)).fetch(`https://vault/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(fixture.body),
+      });
+      const create = await missing.dispatchFetch("https://cryptoscroll.test/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(fixture.body),
+      });
+      expect(create.status).toBe(503);
+      expect((await missing.dispatchFetch("https://cryptoscroll.test/api/health")).status).toBe(
+        503,
+      );
+      expect(
+        (await missing.dispatchFetch(`https://cryptoscroll.test/api/notes/${id}`)).status,
+      ).toBe(200);
+      const opened = await missing.dispatchFetch(`https://cryptoscroll.test/api/notes/${id}/read`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(fixture.proof),
+      });
+      expect(opened.status).toBe(200);
+    } finally {
+      await missing.dispose();
+    }
+  });
+
   it("does not consume or expose ciphertext to metadata visits, HEAD requests or missing credentials", async () => {
     const { id, proof } = await create();
     for (let index = 0; index < 2; index++) {

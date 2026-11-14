@@ -17,11 +17,14 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "pretest:e2e": "npm run build && npm run build:worker",
     "typecheck": "tsc --noEmit && npm run typecheck --prefix worker",
     "dev:worker": "npm run dev --prefix worker",
     "build:worker": "npm run build --prefix worker",
     "check:security": "node scripts/security-lint.mjs",
-    "check:compliance": "node scripts/compliance.mjs"
+    "check:compliance": "node scripts/compliance.mjs",
+    "check:live": "node scripts/check-live.mjs",
+    "smoke:live": "node scripts/smoke-live.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1",

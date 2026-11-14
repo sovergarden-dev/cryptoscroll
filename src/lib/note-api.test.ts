@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getNoteCount } from "./note-api";
+import { consumeNote, getNoteCount } from "./note-api";
 
 beforeEach(() => {
   vi.stubGlobal("window", { location: { origin: "http://localhost:5173" } });
@@ -9,6 +9,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
@@ -80,4 +81,26 @@ describe("API deployment selection", () => {
     expect(await getNoteCount()).toMatchObject({ ok: false, error: { code: "NETWORK" } });
     expect(transport).not.toHaveBeenCalled();
   });
+});
+
+it("bounds a stalled destructive read without retrying or claiming it preserved the note", async () => {
+  vi.useFakeTimers();
+  let activeSignal: AbortSignal | null | undefined;
+  const transport = vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => {
+    activeSignal = init?.signal;
+    return new Promise((_resolve, reject) => {
+      activeSignal?.addEventListener("abort", () => reject(activeSignal?.reason), { once: true });
+    });
+  });
+  const result = consumeNote("a".repeat(32), {
+    readToken: btoa("x".repeat(32)),
+  });
+  await vi.advanceTimersByTimeAsync(30_000);
+  expect(activeSignal?.aborted).toBe(true);
+  await expect(result).resolves.toMatchObject({
+    ok: false,
+    error: { code: "NETWORK", message: expect.stringContaining("may already have consumed") },
+  });
+  expect(transport).toHaveBeenCalledTimes(1);
+  expect(vi.getTimerCount()).toBe(0);
 });

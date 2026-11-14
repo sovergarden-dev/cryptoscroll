@@ -16,6 +16,8 @@ CryptoScroll is a browser-encrypted dead drop for sensitive Markdown notes. Writ
 
 After opening, the recipient can read the in-memory copy until leaving or clearing the screen. The service cannot retrieve a one-time note again, even if the response was lost in transit. Timed notes permit rereading before their deadline. A recipient can still copy or photograph anything they see.
 
+The sharing screen also offers **Revoke note**, with explicit confirmation and passphrase re-entry for protected notes. It invalidates the stored copy, not copies already kept by recipients. Network failure is reported as uncertain, and destructive reads are never retried automatically.
+
 ## Run locally
 
 Use Node.js 22.12 or newer. The canonical lockfiles are generated with npm 11.18.0. If a connected builder uses Bun, use Bun 1.4.4 or newer (`.bun-version`): older Bun releases cannot read the scoped security override in lockfile v3. The frontend is **TanStack Start + React + TypeScript**, built with Vite and Tailwind v4; its routes live in `src/routes/`.
@@ -102,6 +104,10 @@ The app does not persist notes, keys or passphrases in browser storage, send con
 
 Existing links from the old localStorage-only prototype are not automatically migrated. Its data is not uploaded or deleted by this version; recreate notes before replacing a deployment that still needs those links.
 
+Production HTML uses fresh CSP script nonces and disallows arbitrary script execution. Its API connection allowance follows the configured API origin. HTML is not cached, server error output contains no exception details, and API requests have a 30-second deadline.
+
+Creation is limited before storage allocation: initially 30 attempts per minute per network bucket at each Cloudflare location. A daily HMAC tag keeps raw addresses out of the limiter key and application storage. Shared networks can share a bucket; distributed traffic can evade this approximate protection. See [creation admission](docs/research/creation-admission.md).
+
 ## The Frankenstein combination
 
 | Old idea or separate medium   | What CryptoScroll combines it with                                      |
@@ -156,6 +162,8 @@ The frontend and API are separate deployments. Pushing this repository does not 
 
 ### API
 
+Choose an independent rate-limit namespace ID and provision `CREATION_LIMIT_SALT` using Wrangler secret input: generate 32 random bytes, encode as base64, and keep the value out of Git and command arguments. Missing admission configuration prevents new creation while retaining access to existing notes. See [operations](docs/ref/operations.md) for setup, checks and recovery.
+
 Authenticate Wrangler with an account that can deploy Workers, manage KV, bind Durable Objects and update the target zone's routes. A Pages-only token is insufficient.
 
 ```sh
@@ -195,14 +203,16 @@ npm run build:worker
 npm run lint
 bash .kiro/hooks/post-save-security-lint.sh
 bash .kiro/hooks/pre-commit-compliance.sh
-npx playwright install chromium
+npx playwright install chromium firefox webkit
 npm run test:e2e
 ```
 
 - `fast-check` exercises Unicode roundtrips (including a leading BOM), key serialization, wrong keys and authentication tampering. A sample of 100 encryptions checks fresh 96-bit IVs; finite tests do not prove universal nonce uniqueness.
 - Worker integration tests run the actual Cloudflare `workerd` runtime with local KV/Durable Objects, including twelve simultaneous reads, stale KV after object eviction, failed proofs, expiration, alarms and counter persistence. Test-only storage fixtures advance deadlines; the production bundle has no test controls.
-- Browser tests start isolated local services, transfer a link between independent contexts, check the QR and warning screens, reject a wrong passphrase, decrypt the note, check storage/network boundaries, suppress tracking images, and verify mobile/reduced-motion/error states. Clipboard feedback uses a stub so tests do not overwrite the operating-system clipboard.
+- `npm run test:e2e` builds the frontend and API first, then runs their compiled Workers and assets in an isolated local harness. Chromium, Firefox and WebKit tests transfer links between independent contexts, check CSP, authenticated revocation, destructive-read behavior, mobile viewports and failures. Clipboard feedback uses a stub so tests do not overwrite the operating-system clipboard.
 - Local checks do not establish production routing, physical-device compatibility, actual Kiro use or a public video. Those remain separately recorded acceptance evidence.
+
+After publication, run the checks in [operations](docs/ref/operations.md) and follow [physical-device acceptance](docs/ref/device-acceptance.md). Kiro/hackathon work is currently deferred at the owner's request; no Kiro contribution is claimed for this hardening pass.
 
 ## License
 

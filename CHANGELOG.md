@@ -4,6 +4,9 @@
 
 ### Added
 
+- Anonymous creation throttling before storage, with typed 429 responses and a daily HMAC network bucket; no raw address is stored in application data.
+- Confirmed sender-side revocation with passphrase re-entry, keyboard focus and truthful network-failure feedback.
+- Production CSP nonces, content-free server error logging, compiled-Worker acceptance across Chromium/Firefox/WebKit, and separate read-only/live-synthetic verification commands.
 - Cloudflare Worker API with KV ciphertext storage, per-note Durable Object serialization, expiration alarms and an aggregate note counter; the deployed API passed live synthetic-note checks.
 - Property-based WebCrypto tests, real local Worker integration tests and isolated browser verification.
 - MIT license and Kiro-compatible specs, steering, JSON hook definitions and executable compliance/security checks; actual Kiro session evidence is still required for submission.
@@ -17,6 +20,8 @@
 
 ### Fixed
 
+- Bound stalled API calls to 30 seconds without automatic retries of destructive reads, and preserve uncertain revocation results.
+- Keep the fallback error page usable under CSP and wait for hydration before capturing acceptance screenshots.
 - Connect hosted frontend/preview builds to the deployed HTTPS Worker instead of treating Lovable's `/api` path as the backend; preserve the local proxy and explicit self-hosting overrides.
 - Prevent metadata visits, wrong link keys and incorrect or absent passphrases from consuming one-time notes.
 - Persist the consumed state before returning ciphertext so concurrent reads and stale KV replicas cannot replay a note.

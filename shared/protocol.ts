@@ -89,6 +89,7 @@ export const CreatedNoteSchema = z
   .object({ id: z.string().regex(NOTE_ID), expiresAt: z.string().datetime({ offset: true }) })
   .strict();
 export const NoteCountSchema = z.object({ count: z.number().int().nonnegative() }).strict();
+export const RevokedNoteSchema = z.object({ success: z.literal(true) }).strict();
 
 export type ErrorCode =
   | "NOT_FOUND"
@@ -99,6 +100,7 @@ export type ErrorCode =
   | "WRONG_PASSPHRASE"
   | "INVALID_REQUEST"
   | "TOO_LARGE"
+  | "RATE_LIMITED"
   | "UNAVAILABLE"
   | "NETWORK"
   | "DECRYPT_FAILED"

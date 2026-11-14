@@ -1,9 +1,11 @@
 import { z } from "zod";
+import { getApiBase } from "./api-config";
 import {
   CreatedNoteSchema,
   NoteContentSchema,
   NoteCountSchema,
   NoteMetadataSchema,
+  RevokedNoteSchema,
   type CreateNoteRequest,
   type ReadNoteRequest,
   type Result,
@@ -20,47 +22,40 @@ const ErrorSchema = z.object({
       "WRONG_PASSPHRASE",
       "INVALID_REQUEST",
       "TOO_LARGE",
+      "RATE_LIMITED",
       "UNAVAILABLE",
     ]),
     message: z.string().max(300),
   }),
 });
 
-const HOSTED_API_URL = "https://cryptoscroll-worker.thongdocnganhang1.workers.dev/api";
-const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
-
-function apiBase(): string {
-  const frontend = new URL(window.location.origin);
-  const configured =
-    import.meta.env.VITE_API_URL ||
-    (LOOPBACK_HOSTS.has(frontend.hostname) ? "/api" : HOSTED_API_URL);
-  const url = new URL(configured, frontend);
-  const loopback = LOOPBACK_HOSTS.has(url.hostname);
-  if (
-    (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) ||
-    url.username ||
-    url.password ||
-    url.search ||
-    url.hash
-  ) {
-    throw new Error("Invalid API configuration");
-  }
-  return url.href.replace(/\/$/, "");
-}
-
 async function request<T>(
   path: string,
   schema: z.ZodType<T>,
   init: RequestInit = {},
 ): Promise<Result<T>> {
+  const controller = new AbortController();
+  const parentSignal = init.signal;
+  const abortFromParent = () => controller.abort(parentSignal?.reason);
+  if (parentSignal?.aborted) abortFromParent();
+  else parentSignal?.addEventListener("abort", abortFromParent, { once: true });
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, 30_000);
   try {
-    const response = await fetch(`${apiBase()}${path}`, {
-      ...init,
-      cache: "no-store",
-      credentials: "omit",
-      referrerPolicy: "no-referrer",
-      redirect: "error",
-    });
+    const response = await fetch(
+      `${getApiBase(window.location.origin, import.meta.env.VITE_API_URL)}${path}`,
+      {
+        ...init,
+        signal: controller.signal,
+        cache: "no-store",
+        credentials: "omit",
+        referrerPolicy: "no-referrer",
+        redirect: "error",
+      },
+    );
     const body: unknown = await response.json();
     if (!response.ok) {
       const parsed = ErrorSchema.safeParse(body);
@@ -87,10 +82,18 @@ async function request<T>(
       error: {
         code: "NETWORK",
         message:
-          "Could not reach the note service. Check your connection." +
-          (path.endsWith("/read") ? " This read may already have consumed a one-time note." : ""),
+          (timedOut
+            ? "The note service took too long to respond. Check your connection."
+            : "Could not reach the note service. Check your connection.") +
+          (path.endsWith("/read") ? " This read may already have consumed a one-time note." : "") +
+          (init.method === "DELETE"
+            ? " Revocation may already have succeeded; its result could not be confirmed."
+            : ""),
       },
     };
+  } finally {
+    clearTimeout(timeout);
+    parentSignal?.removeEventListener("abort", abortFromParent);
   }
 }
 
@@ -118,4 +121,14 @@ export function consumeNote(id: string, proof: ReadNoteRequest) {
 
 export function getNoteCount(signal?: AbortSignal) {
   return request("/stats", NoteCountSchema, { ...(signal && { signal }) });
+}
+
+export function revokeEncryptedNote(id: string, proof: ReadNoteRequest) {
+  return request(`/notes/${encodeURIComponent(id)}`, RevokedNoteSchema, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${proof.readToken}`,
+      ...(proof.passphraseVerifier && { "X-Passphrase-Proof": proof.passphraseVerifier }),
+    },
+  });
 }
