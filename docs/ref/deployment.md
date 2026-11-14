@@ -27,8 +27,17 @@ All created test notes were consumed or revoked. Normal terminal markers and agg
 
 ## Frontend publication
 
-The owner supplied Lovable's live-publication confirmation on 2026-11-14. The API-origin correction was made afterward and requires a subsequent **Publish → Publish changes** once its Git update reaches the editor. [Lovable publishes snapshots](https://docs.lovable.dev/features/publish); pushing source does not update the live snapshot automatically.
+The owner republished the API-origin correction through **Publish → Publish changes** on 2026-11-14. Runtime source commit `bbbf4ca` passed [GitHub CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/43532237699). [Lovable publishes snapshots](https://docs.lovable.dev/features/publish); pushing source does not update the live snapshot automatically. Later documentation-only commits do not change the verified runtime.
 
-The corrected source passed 35 unit/integration tests, both local browser scenarios, typechecks and both builds. Direct live API acceptance does not establish the published frontend's complete browser flow. After republishing, verify a protected note across independent browser contexts, wrong-passphrase preservation, one successful opening and replay rejection. Timed rereading should also pass. Native clipboard permissions and physical-device behavior remain separate manual checks.
+The corrected source passed 35 unit/integration tests, both local browser scenarios, typechecks and both builds. After publication, the actual production website was verified in separate sender and recipient browser tabs:
+
+- The aggregate note count loaded successfully.
+- A protected one-time note produced a private sharing link and a local QR code.
+- A wrong passphrase showed an error and preserved the note.
+- The correct passphrase decrypted the expected Vietnamese/emoji content.
+- Reloading the consumed link showed the permanently destroyed state.
+- A one-hour note decrypted on its first opening and again after reloading and explicitly reopening it.
+
+The production checks used separate tabs in one browser session; the local browser suite additionally covered independent storage contexts and mobile dimensions. Native clipboard permissions and physical-device behavior remain separate manual checks. Captures of the live reader and destroyed state contain synthetic text only and are retained with this task's local QA artifacts.
 
 Actual Kiro usage, a public demo video and a Devpost entry remain outstanding in the [submission record](submission.md).

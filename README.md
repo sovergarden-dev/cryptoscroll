@@ -4,7 +4,7 @@
 
 CryptoScroll is a browser-encrypted dead drop for sensitive Markdown notes. Write a note, optionally add a passphrase, then share a private link or QR code. The default one-time mode stops serving the encrypted server copy after one authorized opening. No account or saved plaintext drafts.
 
-**Category:** Frankenstein, Kiroween 2026. **Project URL:** [cryptoscroll.syrin.online](https://cryptoscroll.syrin.online). The production API has passed live synthetic-note checks; frontend publication and submission evidence are tracked separately in the [deployment record](docs/ref/deployment.md) and [submission status](docs/ref/submission.md).
+**Category:** Frankenstein, Kiroween 2026. **Project URL:** [cryptoscroll.syrin.online](https://cryptoscroll.syrin.online). The production API and published frontend have passed live synthetic-note checks; see the [deployment record](docs/ref/deployment.md). Genuine Kiro use, a demo video and entry submission remain separate evidence in the [submission status](docs/ref/submission.md).
 
 ## Use it
 

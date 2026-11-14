@@ -47,10 +47,12 @@ At initial source delivery, production routing/storage were unverified and Cloud
 - S7 PASS: evidence distinguishes local execution, simulated mobile dimensions, a clipboard stub and unverified external conditions.
 - S8 N/A: source delivery only; no release tag or production version was minted.
 
-The easiest check to miss was the real browser flow; it exposed pre-hydration input handling and the fragment-changing skip control. No production data path was exercised during this initial source-delivery review. Subsequent API acceptance and the remaining hosted-frontend check are recorded in [deployment acceptance](deployment.md).
+The easiest check to miss was the real browser flow; it exposed pre-hydration input handling and the fragment-changing skip control. No production data path was exercised during this initial source-delivery review. Subsequent API and published-frontend acceptance are recorded in [deployment acceptance](deployment.md).
 
 ## Hosted API-origin regression
 
 The first regression run failed because the hosted frontend selected its own `/api`, which Lovable did not route to the standalone Worker. The correction selects the deployed Worker on hosted origins, retains the local proxy on loopback hosts, and preserves the explicit `VITE_API_URL` override. All 35 tests across five files then passed, including HTTPS/configuration validation. Frontend and Worker typechecks also passed. Live API results are separate from these local checks.
 
 The frontend build and API dry run passed again, and the compiled browser asset contains the deployed API endpoint. ESLint reported zero errors and the same six existing UI-library warnings; security and compliance checks passed. Repeating browser acceptance exposed a 90-second fixture setup timeout during cold TanStack dependency optimization on Windows. With a 180-second fixture startup budget, both browser scenarios passed in 4.6 minutes. That development run logged a hydration warning involving temporary `caret-color: transparent` styles during the mobile screenshot; all functional assertions passed.
+
+Runtime commit `bbbf4ca` also passed [GitHub CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/43532237699). The owner then republished in Lovable, and the real hosted UI passed creation, wrong-passphrase preservation, decryption, rejection after the one-time read and timed rereading. See [production acceptance](deployment.md) for the distinction between live browser tabs, local independent contexts and physical-device checks.

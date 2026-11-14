@@ -2,7 +2,7 @@
 
 Started: 2026-11-13. Baseline: `c2c5690` on public `sovergarden-dev/cryptoscroll`.
 
-Status on 2026-11-14: implementation and local acceptance are complete; [verification](../ref/verification.md) records the results. Source commit `3d528c1` was pushed and passed GitHub CI. The API is deployed and passed live synthetic-note checks. The hosted API-origin correction still needs frontend publication and a live browser check; [deployment status](../ref/deployment.md) tracks that separately from genuine Kiro/video/entry evidence in [submission status](../ref/submission.md).
+Status on 2026-11-14: implementation, local acceptance and production deployment are complete; [verification](../ref/verification.md) records the results. Runtime source commit `bbbf4ca` was pushed and passed GitHub CI. The API and republished Lovable frontend passed live synthetic-note checks, including wrong-passphrase preservation and rejection after the one-time read. [Deployment acceptance](../ref/deployment.md) records the scope separately from genuine Kiro/video/entry evidence in [submission status](../ref/submission.md).
 
 Execute the owner's eight tasks in order. The [product spec](../../.kiro/specs/cryptoscroll.md) is the acceptance contract; [atomic-read research](../research/atomic-read.md) explains corrections to unsafe sample code.
 
