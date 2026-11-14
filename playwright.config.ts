@@ -8,8 +8,12 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   outputDir: "test-results",
   reporter: [["list"], ["html", { open: "never" }]],
+  projects: [
+    { name: "chromium", use: { browserName: "chromium" } },
+    { name: "firefox", use: { browserName: "firefox" } },
+    { name: "webkit", use: { browserName: "webkit" } },
+  ],
   use: {
-    browserName: "chromium",
     viewport: { width: 1440, height: 1000 },
     trace: "retain-on-failure",
     screenshot: "only-on-failure",

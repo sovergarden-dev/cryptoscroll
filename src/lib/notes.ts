@@ -8,6 +8,7 @@ import {
   type ExpiryOption,
   type NoteMetadata,
   type Result,
+  type ReadNoteRequest,
 } from "../../shared/protocol";
 import {
   base64ToKey,
@@ -18,7 +19,7 @@ import {
   generateKey,
   keyToBase64,
 } from "./crypto";
-import { consumeNote, getNoteMetadata, uploadNote } from "./note-api";
+import { consumeNote, getNoteMetadata, revokeEncryptedNote, uploadNote } from "./note-api";
 
 export { getNoteMetadata, getNoteCount } from "./note-api";
 export type { ExpiryOption, NoteMetadata, Result } from "../../shared/protocol";
@@ -114,12 +115,14 @@ export async function createNote(options: {
   }
 }
 
-export async function readNote(
+type NoteAccess = { primaryKey: CryptoKey; proof: ReadNoteRequest; passphraseKey?: CryptoKey };
+
+async function prepareNoteAccess(
   id: string,
   encodedKey: string,
   passphrase?: string,
   knownMetadata?: NoteMetadata,
-): Promise<Result<NoteData>> {
+): Promise<Result<NoteAccess>> {
   if (!NOTE_ID.test(id))
     return {
       ok: false,
@@ -165,16 +168,38 @@ export async function readNote(
       },
     };
   }
-  const result = await consumeNote(id, {
-    readToken,
-    ...(protection && { passphraseVerifier: protection.verifier }),
-  });
+  return {
+    ok: true,
+    data: {
+      primaryKey,
+      proof: { readToken, ...(protection && { passphraseVerifier: protection.verifier }) },
+      ...(protection && { passphraseKey: protection.key }),
+    },
+  };
+}
+
+export async function revokeNote(id: string, encodedKey: string, passphrase?: string) {
+  const access = await prepareNoteAccess(id, encodedKey, passphrase);
+  if (!access.ok) return access;
+  return revokeEncryptedNote(id, access.data.proof);
+}
+
+export async function readNote(
+  id: string,
+  encodedKey: string,
+  passphrase?: string,
+  knownMetadata?: NoteMetadata,
+): Promise<Result<NoteData>> {
+  const access = await prepareNoteAccess(id, encodedKey, passphrase, knownMetadata);
+  if (!access.ok) return access;
+  const { primaryKey, passphraseKey, proof } = access.data;
+  const result = await consumeNote(id, proof);
   if (!result.ok) return result;
   try {
     let encrypted = { ciphertext: result.data.ciphertext, iv: result.data.iv };
-    if (protection)
+    if (passphraseKey)
       encrypted = EncryptedPayloadSchema.parse(
-        JSON.parse(await decryptNote(encrypted, protection.key)),
+        JSON.parse(await decryptNote(encrypted, passphraseKey)),
       );
     const content = await decryptNote(encrypted, primaryKey);
     return {

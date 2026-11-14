@@ -7,7 +7,7 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "wrangler dev --config wrangler.toml --local --port 8787 --var ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173 --var ENVIRONMENT:development",
+    "dev": "wrangler dev --config wrangler.toml --local --port 8787 --var ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173 --var ENVIRONMENT:development --var CREATION_LIMIT_SALT:eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=",
     "deploy": "wrangler deploy --config wrangler.toml",
     "build": "wrangler deploy --config wrangler.toml --dry-run --outdir dist",
     "typecheck": "tsc --noEmit",

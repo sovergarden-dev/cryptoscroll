@@ -1,6 +1,7 @@
 import { CreateNoteSchema, MAX_LIFETIME_MS, NOTE_ID, ReadNoteSchema } from "../shared/protocol";
 import type { Env } from "./env";
 import { failure, json, readJson } from "./http";
+import { admitCreation, hasCreationLimiter } from "./creation-limit";
 
 export { NoteVault } from "./note-vault";
 export { NoteCounter } from "./note-counter";
@@ -20,13 +21,19 @@ async function route(request: Request, env: Env, context: ExecutionContext): Pro
       env.NOTES_KV.get("stats:created"),
       counter(env).fetch("https://counter/count"),
       env.NOTE_VAULT.get(env.NOTE_VAULT.idFromName("health-probe")).fetch("https://vault/health"),
+      hasCreationLimiter(env)
+        ? env.CREATION_LIMITER.limit({ key: "health" })
+        : Promise.resolve(null),
     ]);
     const healthy =
       checks[0]?.status === "fulfilled" &&
       checks[1]?.status === "fulfilled" &&
       checks[1].value.ok &&
       checks[2]?.status === "fulfilled" &&
-      checks[2].value.status === 404;
+      checks[2].value.status === 404 &&
+      checks[3]?.status === "fulfilled" &&
+      checks[3].value !== null &&
+      typeof checks[3].value.success === "boolean";
     return json(
       { status: healthy ? "ok" : "degraded", service: "CryptoScroll Worker", protocol: 1 },
       healthy ? 200 : 503,
@@ -35,6 +42,8 @@ async function route(request: Request, env: Env, context: ExecutionContext): Pro
   if (pathname === "/api/stats" && request.method === "GET")
     return counter(env).fetch("https://counter/count");
   if (pathname === "/api/notes" && request.method === "POST") {
+    const denied = await admitCreation(request, env);
+    if (denied) return denied;
     const body = await readJson(request);
     if (!body.ok) return body.response;
     const parsed = CreateNoteSchema.safeParse(body.data);
@@ -144,6 +153,7 @@ export default {
     if (origin) {
       headers.set("Access-Control-Allow-Origin", origin);
       headers.set("Access-Control-Allow-Methods", METHODS);
+      headers.set("Access-Control-Expose-Headers", "Retry-After");
       headers.set(
         "Access-Control-Allow-Headers",
         "Content-Type, Authorization, X-Passphrase-Proof",

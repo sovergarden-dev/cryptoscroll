@@ -9,6 +9,11 @@ workers_dev = true
 binding = "NOTES_KV"
 id = "9d40a66a26494bb49ecfc9522bef814a"
 
+[[ratelimits]]
+name = "CREATION_LIMITER"
+namespace_id = "752524013"
+simple = { limit = 30, period = 60 }
+
 [durable_objects]
 bindings = [
   { name = "NOTE_VAULT", class_name = "NoteVault" },

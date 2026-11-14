@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { ArrowLeft, Check, Copy, LockKeyhole, TriangleAlert } from "lucide-react";
 import { Button } from "./ui/button";
 import type { CreatedNote } from "@/lib/notes";
+import { RevokeNoteDialog, type RevocationOutcome } from "./RevokeNoteDialog";
 
 export function NoteSuccess({
   note,
@@ -13,8 +14,16 @@ export function NoteSuccess({
 }) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
+  const [retired, setRetired] = useState<RevocationOutcome | null>(null);
+  const statusTitle = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (retired) statusTitle.current?.focus();
+  }, [retired]);
 
   async function copy() {
+    setCopied(false);
+    setError("");
     try {
       await navigator.clipboard.writeText(note.url);
       setCopied(true);
@@ -23,6 +32,25 @@ export function NoteSuccess({
       setError("Clipboard access is unavailable. Select the link and copy it manually.");
     }
   }
+
+  if (retired)
+    return (
+      <section className="mx-auto w-full max-w-2xl rounded-2xl border bg-card p-6 shadow-glow sm:p-10">
+        <div className="status-icon">
+          <LockKeyhole aria-hidden="true" className="size-8" />
+        </div>
+        <h1 ref={statusTitle} tabIndex={-1} className="mt-6 text-2xl font-semibold">
+          {retired === "revoked" ? "Note revoked." : "This note is no longer available."}
+        </h1>
+        <p className="mt-3 text-muted-foreground">
+          This link can no longer retrieve the stored note. Copies already kept by a recipient are
+          unaffected.
+        </p>
+        <Button onClick={onCreateAnother} className="mt-6">
+          <ArrowLeft aria-hidden="true" /> Create another note
+        </Button>
+      </section>
+    );
 
   return (
     <section
@@ -106,9 +134,12 @@ export function NoteSuccess({
         Keep this link before leaving. We cannot recover its key. Anyone with the complete link
         {note.hasPassphrase ? " and passphrase" : ""} can open the note.
       </p>
-      <Button variant="ghost" onClick={onCreateAnother} className="mt-6">
-        <ArrowLeft aria-hidden="true" /> Create another note
-      </Button>
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <Button variant="ghost" onClick={onCreateAnother}>
+          <ArrowLeft aria-hidden="true" /> Create another note
+        </Button>
+        <RevokeNoteDialog note={note} onRetired={setRetired} />
+      </div>
     </section>
   );
 }
