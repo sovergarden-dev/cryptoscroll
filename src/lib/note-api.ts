@@ -20,6 +20,7 @@ const ErrorSchema = z.object({
       "WRONG_PASSPHRASE",
       "INVALID_REQUEST",
       "TOO_LARGE",
+      "RATE_LIMITED",
       "UNAVAILABLE",
     ]),
     message: z.string().max(300),

@@ -99,6 +99,7 @@ export type ErrorCode =
   | "WRONG_PASSPHRASE"
   | "INVALID_REQUEST"
   | "TOO_LARGE"
+  | "RATE_LIMITED"
   | "UNAVAILABLE"
   | "NETWORK"
   | "DECRYPT_FAILED"
