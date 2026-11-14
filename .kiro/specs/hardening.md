@@ -23,3 +23,5 @@ The sharing screen offers a deliberate revoke action. A protected note requires 
 ## Acceptance and provenance
 
 Record actual Kiro spec/hook/tool activity and its resulting diff/tests. Passing local browser emulation is distinct from the owner's Android and iPhone/iPad checks. A published demo must show real behavior using synthetic notes and describe the limits of server-copy deletion accurately.
+
+The owner subsequently deferred Kiro and hackathon work on 2026-11-14 to focus on the website. No Kiro contribution is claimed for this implementation. The website acceptance requirements remain active.

@@ -9,7 +9,6 @@ Started 2026-11-14 at `088d052`. Owner authorization: “đồng ý tất cả v
 - [ ] Add authenticated revocation to the sharing screen with explicit confirmation and correct handling of wrong passphrases, concurrent consumption and uncertain network outcomes.
 - [ ] Exercise compiled production assets in browser acceptance; cover supported browser engines, keyboard use and request failures.
 - [ ] Add a deliberate post-publication smoke command and privacy-preserving health monitoring. Keep synthetic writes separate from ordinary health checks and default tests.
-- [ ] Perform and record real Kiro work, then prepare an accurate English write-up, a public demo under three minutes and the Devpost submission materials.
 - [ ] Guide and record Android and iPhone/iPad acceptance. The owner confirmed both are available; physical-device results must come from those devices.
 
 ## Additional improvements within this pass
@@ -22,7 +21,11 @@ Started 2026-11-14 at `088d052`. Owner authorization: “đồng ý tất cả v
 
 Local tests use disposable isolated runtimes. Production smoke requires an explicit target and uses synthetic notes with cleanup. Each consequential change must be exercised through its public entry, including failure cases. Commit clean groups, inspect CI, deploy the Worker, publish the frontend and then verify the live flow before updating the deployment record. Preserve published Git history.
 
-Kiro sign-in is awaiting the owner in the opened Kiro Web tab. No Kiro contribution may be claimed until its actual session and outputs are observed. Keep repository writes scoped to the assigned work while Kiro is active. YouTube/Devpost account access and final account/contract actions remain owner hand-offs when required by the service UI.
+The owner subsequently chose “Tạm bỏ Kiro, tiếp tục hoàn thiện website”. Kiro and hackathon submission work are deferred; implement and verify website hardening with the existing tools. No Kiro contribution is claimed. Kiro Web sign-in was observed, but the account required a paid plan for Web. The official CLI was installed in the existing Ubuntu WSL environment; no Kiro coding session occurred.
+
+## Local checkpoint
+
+The compiled frontend and API now run together in an isolated browser harness. All 12 browser scenarios across Chromium, Firefox and WebKit passed. The unit/integration suite passed 38 tests. CSP, revocation, the request deadline and content-free SSR logging are implemented locally; they have not yet been published. The read-only live checker was exercised against the real local runtimes and rejected an intentionally mismatched API target. Physical-device results and production acceptance remain open.
 
 ## Follow-up candidates
 

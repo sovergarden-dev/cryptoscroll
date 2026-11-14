@@ -2,6 +2,8 @@
 
 Checked against the [official event page](https://kiroween.devpost.com/) on 2026-11-13. This is a preparation checklist, not a submitted-entry receipt.
 
+Owner update on 2026-11-14: Kiro and hackathon submission work are deferred while website hardening proceeds. The outstanding evidence below is retained for a possible later resumption.
+
 | Requirement                      | Evidence/status                                                                                                                                                                                                                                              |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Public repository                | GitHub reports `sovergarden-dev/cryptoscroll` as PUBLIC.                                                                                                                                                                                                     |
