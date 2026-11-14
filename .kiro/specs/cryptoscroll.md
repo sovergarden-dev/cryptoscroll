@@ -31,6 +31,7 @@ The target experience is a small, dark, accessible tool for people handing a tem
 
 ### Backend
 
+- Hosted production and Lovable previews call the dedicated HTTPS Worker endpoint. Loopback development uses `/api` through Vite's local proxy. `VITE_API_URL` overrides either default for self-hosting. Sharing URLs continue to use the frontend's origin and a fragment-only key.
 - Cloudflare Worker routes validate bounded JSON and use a random 16-byte hex note ID.
 - `NOTES_KV` holds the encrypted payload with expiration at the note's deadline. Each note's Durable Object owns its metadata, authorization hashes and lifecycle. There is no public path that reads directly from KV.
 - KV alone cannot perform atomic read-and-delete. The Durable Object serializes operations across awaited KV calls, durably marks a one-time note consumed, and deletes the KV blob before returning ciphertext. A stale KV value can never bypass the consumed marker.

@@ -1,6 +1,6 @@
 # Local verification
 
-Verified during 2026-11-13–14 on Windows, using Node 22.22.0, npm 11.18.0, Wrangler 4.161.0 and Chromium 158. The source baseline was `c2c5690`; the accompanying Git commit identifies the resulting change set. This records local evidence, not a production deployment or a completed hackathon entry.
+Verified during 2026-11-13–14 on Windows, using Node 22.22.0, npm 11.18.0, Wrangler 4.161.0 and Chromium 158. The source baseline was `c2c5690`; implementation commit `3d528c1` passed [GitHub CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/43474649977). The initial source-delivery evidence below predates provisioning. Later production checks are recorded separately in [deployment acceptance](deployment.md); neither record proves a completed hackathon entry.
 
 | Check                                    | Result                                                                                                                                                          |
 | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -31,11 +31,11 @@ Verified during 2026-11-13–14 on Windows, using Node 22.22.0, npm 11.18.0, Wra
 
 The frontend's generated Wrangler redirect initially conflicted with commands in `worker/`; selecting `--config wrangler.toml` in every API script fixes the actual CLI path. Both builds were checked in sequence. The Lovable Vite wrapper still emits an advisory about its `vite-tsconfig-paths` plugin having a native Vite alternative; it does not prevent building or running the app.
 
-The service's persistent format is new; the baseline had no server database to migrate. The versioned Durable Object migration creates two new classes. Existing browser-only notes were neither uploaded nor deleted. Deployment requires a real KV namespace and an authorized account; the all-zero namespace is a local-development value.
+The service's persistent format is new; the baseline had no server database to migrate. The versioned Durable Object migration creates two new classes. Existing browser-only notes were neither uploaded nor deleted. At this initial local-verification stage, deployment still required a real KV namespace and an authorized account; the placeholder has since been replaced during [production deployment](deployment.md).
 
-Production routing/storage, physical-device behavior, native clipboard permissions, actual Kiro hook execution and a public video remain unverified. The available Cloudflare authorization lacked Workers/KV/Routes scopes. GitHub CI repeats local commands on Linux after source publication; its run is the source of truth for CI status. See [submission status](submission.md) for the outstanding external steps.
+At initial source delivery, production routing/storage were unverified and Cloudflare authorization lacked Workers/KV/Routes scopes. These API prerequisites were subsequently resolved. Physical-device behavior, native clipboard permissions, actual Kiro hook execution and a public video remain unverified. GitHub CI repeats local commands on Linux after source publication; its run is the source of truth for CI status. See [submission status](submission.md) for the current outstanding external steps.
 
-## Source-delivery review
+## Initial source-delivery review
 
 - S0 PASS: initial checkout clean; requested code and checks/docs included, generated output excluded.
 - S1 PASS: no prior release/tag scheme; changes recorded under `Unreleased`.
@@ -47,4 +47,10 @@ Production routing/storage, physical-device behavior, native clipboard permissio
 - S7 PASS: evidence distinguishes local execution, simulated mobile dimensions, a clipboard stub and unverified external conditions.
 - S8 N/A: source delivery only; no release tag or production version was minted.
 
-The easiest check to miss was the real browser flow; it exposed pre-hydration input handling and the fragment-changing skip control. A production-only failure could still originate in credentials, routing or provisioned bindings, so local success is not reported as live acceptance. No production data path was exercised. The pending target check is a disposable protected note created and read across two actual production clients, with wrong-passphrase preservation and second-read rejection.
+The easiest check to miss was the real browser flow; it exposed pre-hydration input handling and the fragment-changing skip control. No production data path was exercised during this initial source-delivery review. Subsequent API acceptance and the remaining hosted-frontend check are recorded in [deployment acceptance](deployment.md).
+
+## Hosted API-origin regression
+
+The first regression run failed because the hosted frontend selected its own `/api`, which Lovable did not route to the standalone Worker. The correction selects the deployed Worker on hosted origins, retains the local proxy on loopback hosts, and preserves the explicit `VITE_API_URL` override. All 35 tests across five files then passed, including HTTPS/configuration validation. Frontend and Worker typechecks also passed. Live API results are separate from these local checks.
+
+The frontend build and API dry run passed again, and the compiled browser asset contains the deployed API endpoint. ESLint reported zero errors and the same six existing UI-library warnings; security and compliance checks passed. Repeating browser acceptance exposed a 90-second fixture setup timeout during cold TanStack dependency optimization on Windows. With a 180-second fixture startup budget, both browser scenarios passed in 4.6 minutes. That development run logged a hydration warning involving temporary `caret-color: transparent` styles during the mobile screenshot; all functional assertions passed.

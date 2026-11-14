@@ -4,7 +4,7 @@
 
 CryptoScroll is a browser-encrypted dead drop for sensitive Markdown notes. Write a note, optionally add a passphrase, then share a private link or QR code. The default one-time mode stops serving the encrypted server copy after one authorized opening. No account or saved plaintext drafts.
 
-**Category:** Frankenstein, Kiroween 2026. **Project URL:** [cryptoscroll.syrin.online](https://cryptoscroll.syrin.online). The new production backend is not yet verified; local operation and production setup are separate. See the [submission status](docs/ref/submission.md) before treating this repository as a completed entry.
+**Category:** Frankenstein, Kiroween 2026. **Project URL:** [cryptoscroll.syrin.online](https://cryptoscroll.syrin.online). The production API has passed live synthetic-note checks; frontend publication and submission evidence are tracked separately in the [deployment record](docs/ref/deployment.md) and [submission status](docs/ref/submission.md).
 
 ## Use it
 
@@ -41,7 +41,7 @@ npm run dev
 
 Open [localhost:5173](http://localhost:5173). Vite proxies `/api` to the real local Worker runtime at port 8787. Wrangler supplies local KV and SQLite-backed Durable Objects; no Cloudflare login is needed for this mode. Local development data lives under the ignored `worker/.wrangler/` directory. Tests use isolated temporary runtimes instead.
 
-The browser defaults to same-origin `/api`. `.env.example` contains the requested production endpoint; do not copy it for ordinary local development, or your browser will contact production instead of the local proxy. An alternate API must use HTTPS, except for loopback development, and must allow the frontend origin in its CORS configuration.
+On loopback hosts, the browser defaults to same-origin `/api`. Hosted production and Lovable previews default to `https://cryptoscroll-worker.thongdocnganhang1.workers.dev/api`. `VITE_API_URL` overrides either default. Do not copy `.env.example` for ordinary local development, or your browser will contact production instead of the local proxy. An alternate API must use HTTPS, except for loopback development, and must allow the frontend origin in its CORS configuration.
 
 Install the local commit checks once:
 
@@ -164,7 +164,7 @@ npx wrangler login
 npx wrangler kv namespace create NOTES_KV --config wrangler.toml
 ```
 
-Replace the all-zero namespace ID in `worker/wrangler.toml` with the returned ID. Set `ALLOWED_ORIGINS` to the frontend's exact HTTPS origin, and change the route and zone for your domain. The `v1` Durable Object migration creates `NoteVault` and `NoteCounter`; retain it in deployment history. Do not remove the gate or switch the read path to direct KV access.
+The checked-in `worker/wrangler.toml` identifies this project's deployed account and namespace. For your own instance, replace `account_id` and the KV namespace ID with your account and the returned ID. Set `ALLOWED_ORIGINS` to your frontend's exact HTTPS origin. Change the route and zone for your domain, or remove `[[routes]]` when using only the `workers.dev` endpoint. A Cloudflare route requires a [proxied DNS record](https://developers.cloudflare.com/workers/configuration/routing/routes/). The `v1` Durable Object migration creates `NoteVault` and `NoteCounter`; retain it in deployment history. Do not remove the gate or switch the read path to direct KV access.
 
 ```sh
 npm run build
@@ -179,9 +179,11 @@ The first command is a **dry run**; only `deploy` changes Cloudflare. Worker scr
 npm run build
 ```
 
-The existing Lovable/TanStack integration emits `.output/public/` assets and a `.output/server/` SSR Worker. This is not a plain `dist/` SPA: deploy its generated Cloudflare Worker configuration or use the connected Lovable project. For another host, choose a compatible TanStack/Nitro target. Keep the `/api/*` route pointed at the separately deployed API Worker.
+The existing Lovable/TanStack integration emits `.output/public/` assets and a `.output/server/` SSR Worker. This is not a plain `dist/` SPA: deploy its generated Cloudflare Worker configuration or use the connected Lovable project. For another host, choose a compatible TanStack/Nitro target.
 
-Use same-origin `/api`, or set `VITE_API_URL` **at build time** to an approved HTTPS API endpoint. Never put private credentials in a `VITE_*` variable. Use disposable notes for previews; an editor or compromised host can inspect the browser.
+For your own instance, set `VITE_API_URL` **at build time** to your deployed HTTPS API endpoint; otherwise hosted builds use this project's Worker. Use `/api` only when you have configured a working reverse proxy or proxied Cloudflare route. Never put private credentials in a `VITE_*` variable. Use disposable notes for previews; an editor or compromised host can inspect the browser.
+
+Lovable publishes a snapshot: Git updates reach the editor, but require **Publish → Publish changes** to update the live frontend. See [Lovable's publishing guide](https://docs.lovable.dev/features/publish).
 
 ## Verification
 

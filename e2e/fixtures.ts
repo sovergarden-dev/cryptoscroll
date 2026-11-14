@@ -43,7 +43,8 @@ export const test = base.extend<object, { appOrigin: string }>({
         await Promise.all([vite?.close(), runtime.dispose()]);
       }
     },
-    { scope: "worker", timeout: 90_000 },
+    // Allow cold TanStack dependency optimization on Windows before the tests start.
+    { scope: "worker", timeout: 180_000 },
   ],
   baseURL: async ({ appOrigin }, provide) => provide(appOrigin),
 });

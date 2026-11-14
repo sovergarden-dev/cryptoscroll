@@ -6,4 +6,5 @@
 - [Implementation plan](plan/submission.md)
 - [Submission requirements and evidence](ref/submission.md)
 - [Local verification results](ref/verification.md)
+- [Production deployment and acceptance](ref/deployment.md)
 - [Setup and security overview](../README.md)

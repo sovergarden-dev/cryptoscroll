@@ -4,7 +4,7 @@
 
 ### Added
 
-- Cloudflare Worker API with KV ciphertext storage, per-note Durable Object serialization, expiration alarms and an aggregate note counter; production provisioning remains a separate deployment step.
+- Cloudflare Worker API with KV ciphertext storage, per-note Durable Object serialization, expiration alarms and an aggregate note counter; the deployed API passed live synthetic-note checks.
 - Property-based WebCrypto tests, real local Worker integration tests and isolated browser verification.
 - MIT license and Kiro-compatible specs, steering, JSON hook definitions and executable compliance/security checks; actual Kiro session evidence is still required for submission.
 - Seven-day and thirty-day expiry options, explicit recipient confirmation, local QR sharing, mobile layouts and reduced-motion support.
@@ -17,6 +17,7 @@
 
 ### Fixed
 
+- Connect hosted frontend/preview builds to the deployed HTTPS Worker instead of treating Lovable's `/api` path as the backend; preserve the local proxy and explicit self-hosting overrides.
 - Prevent metadata visits, wrong link keys and incorrect or absent passphrases from consuming one-time notes.
 - Persist the consumed state before returning ciphertext so concurrent reads and stale KV replicas cannot replay a note.
 - Preserve a leading Unicode BOM through encryption/decryption.

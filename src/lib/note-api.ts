@@ -26,10 +26,16 @@ const ErrorSchema = z.object({
   }),
 });
 
+const HOSTED_API_URL = "https://cryptoscroll-worker.thongdocnganhang1.workers.dev/api";
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
 function apiBase(): string {
-  const configured = import.meta.env.VITE_API_URL || "/api";
-  const url = new URL(configured, window.location.origin);
-  const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  const frontend = new URL(window.location.origin);
+  const configured =
+    import.meta.env.VITE_API_URL ||
+    (LOOPBACK_HOSTS.has(frontend.hostname) ? "/api" : HOSTED_API_URL);
+  const url = new URL(configured, frontend);
+  const loopback = LOOPBACK_HOSTS.has(url.hostname);
   if (
     (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) ||
     url.username ||
