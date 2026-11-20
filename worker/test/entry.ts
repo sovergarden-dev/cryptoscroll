@@ -37,6 +37,12 @@ export class NoteVault extends ProductionNoteVault {
   }
 
   override async fetch(request: Request): Promise<Response> {
+    if (request.method === "PUT" && request.url === "https://fixture.invalid/frozen-v1-state") {
+      const record = await request.json<{ expiresAt: string }>();
+      await this.fixtureState.storage.put("note", record);
+      await this.fixtureState.storage.setAlarm(Date.parse(record.expiresAt));
+      return new Response(null, { status: 204 });
+    }
     const path = new URL(request.url).pathname;
     if (path === "/fixture/check-alarm") {
       const scheduled = await this.fixtureState.storage.getAlarm();
