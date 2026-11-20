@@ -1,6 +1,16 @@
 # Product follow-up verification
 
-The published frontend is `06e0c0b`. It includes the language-selector correction to the November 14 follow-up (`bbf4518`). The API passed its synthetic checks on November 14, 2026, and the initial follow-up frontend passed its Chromium checks on November 18. Both frontend revisions passed 52 unit and integration tests and 24 browser scenarios in Linux CI. [November 14 CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/43589898896) · [November 20 CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/44711406531)
+The current published frontend and API use `84b5ff9`. On November 20, 2026, 60 unit and integration tests and 36 browser scenarios passed locally and in Linux CI. [Main CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/44723488917)
+
+The earlier language-selector release (`06e0c0b`) and the November 14 follow-up (`bbf4518`) each passed 52 unit and integration tests and 24 browser scenarios. [November 14 CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/43589898896) · [Language-selector CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/44711406531)
+
+## Original text and recovery
+
+Workerd tests exercised interrupted ciphertext cleanup during an authorized read and revocation. After either interruption, the terminal state survived an object restart, further reads returned 410, and the alarm removed the remaining ciphertext once storage became available. The test uses isolated storage fault controls. The opted-in production API smoke verified old note envelopes, creation recovery, protected notes, timed revocation and exactly one successful opening from twelve simultaneous requests.
+
+After the Worker and frontend were deployed, Chromium in a Pixel 7 profile focused the public Vietnamese editor from the mobile shortcut. Its first creation response was a simulated 429 with a four-second `Retry-After`. The control disabled and reopened, then an explicit retry submitted the same envelope to the live API. A WebKit iPhone 13 profile opened the disposable note, switched to the literal string and copied it through a test clipboard. Spaces, Markdown, Unicode, a tab and the final line break matched exactly. The reader made one payload request and cleanup verified HTTP 410. Public service, CSP and CORS checks passed at 11:07 UTC. Device clipboard permissions remain outside this run.
+
+Separate draft [PR #5](https://github.com/sovergarden-dev/cryptoscroll/pull/5) contains sender revocation receipts. The review candidate at `a95d98d` passed 62 unit and integration tests and 39 browser scenarios. Independent review is pending selection of a reviewer. [Candidate CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/44724140711)
 
 The table records the local implementation checks of November 14. Production checks and the device coverage are recorded below. The recovery design and the scope for independent review are available separately. [Creation recovery](../research/creation-recovery.md) · [Review brief](security-review-brief.md)
 
