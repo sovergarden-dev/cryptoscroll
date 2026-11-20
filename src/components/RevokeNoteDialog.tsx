@@ -87,8 +87,12 @@ export function RevokeNoteDialog({
                 value={passphrase}
                 onChange={(event) => setPassphrase(event.target.value)}
                 disabled={busy}
-                aria-describedby="revoke-passphrase-help"
-                aria-invalid={!!error}
+                aria-describedby={
+                  error ? "revoke-passphrase-help revoke-error" : "revoke-passphrase-help"
+                }
+                aria-invalid={
+                  error?.code === "WRONG_PASSPHRASE" || error?.code === "PASSPHRASE_REQUIRED"
+                }
                 className="mt-2 w-full rounded-lg border bg-background p-3 font-mono text-sm"
               />
               <p id="revoke-passphrase-help" className="mt-2 text-xs text-muted-foreground">
@@ -97,7 +101,13 @@ export function RevokeNoteDialog({
             </div>
           )}
           {error && (
-            <p ref={errorMessage} role="alert" tabIndex={-1} className="text-sm text-danger-text">
+            <p
+              id="revoke-error"
+              ref={errorMessage}
+              role="alert"
+              tabIndex={-1}
+              className="text-sm text-danger-text"
+            >
               {errorText(error, "revoke")}
             </p>
           )}

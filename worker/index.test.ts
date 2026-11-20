@@ -77,7 +77,15 @@ function read(id: string, proof: ReadNoteRequest) {
 
 async function control(
   id: string,
-  action: "expire" | "forget" | "alarm" | "fail-write" | "fail-after-write",
+  action:
+    | "expire"
+    | "forget"
+    | "alarm"
+    | "fail-write"
+    | "fail-after-write"
+    | "pause-delete"
+    | "resume-delete"
+    | "check-alarm",
 ) {
   const namespace = await runtime.getDurableObjectNamespace("NOTE_VAULT");
   const response = await namespace
@@ -457,6 +465,34 @@ describe("Cloudflare Worker with real KV and Durable Objects", () => {
     expect(response.status).toBe(200);
     expect((await read(id, proof)).status).toBe(410);
   });
+
+  it.each(["read", "revoke"] as const)(
+    "keeps a note retired through interrupted KV deletion on %s",
+    async (operation) => {
+      const { id, proof } = await create(operation === "read");
+      const kv = await runtime.getKVNamespace("NOTES_KV");
+      await control(id, "pause-delete");
+      const response =
+        operation === "read"
+          ? await read(id, proof)
+          : await runtime.dispatchFetch(`https://cryptoscroll.test/api/notes/${id}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${proof.readToken}` },
+            });
+      expect(response.status).toBe(503);
+      expect(await kv.get(id)).not.toBeNull();
+      expect(
+        (await runtime.dispatchFetch(`https://cryptoscroll.test/api/notes/${id}`)).status,
+      ).toBe(410);
+      await runtime.unsafeEvictDurableObject("cryptoscroll-test", "NoteVault", { name: id });
+      expect((await read(id, proof)).status).toBe(410);
+      await control(id, "check-alarm");
+      await control(id, "resume-delete");
+      await control(id, "alarm");
+      expect(await kv.get(id)).toBeNull();
+      expect((await read(id, proof)).status).toBe(410);
+    },
+  );
 
   it("rejects malformed, oversized, plaintext-bearing and expired envelopes", async () => {
     const { body } = await envelope();

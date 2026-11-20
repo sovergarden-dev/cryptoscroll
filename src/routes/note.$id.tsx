@@ -202,7 +202,9 @@ function NotePage() {
                 aria-describedby={
                   error ? "read-passphrase-help read-error" : "read-passphrase-help"
                 }
-                aria-invalid={!!error}
+                aria-invalid={
+                  error?.code === "WRONG_PASSPHRASE" || error?.code === "PASSPHRASE_REQUIRED"
+                }
               />
               <p id="read-passphrase-help" className="mt-2 text-xs text-muted-foreground">
                 {t("wrongPassphraseHelp")}
@@ -217,7 +219,7 @@ function NotePage() {
               role="alert"
               className="mt-4 text-sm leading-relaxed text-danger-text"
             >
-              {errorText(error, "read")}
+              {errorText(error, state.metadata.burnAfterRead ? "one-time-read" : undefined)}
             </p>
           )}
           <Button

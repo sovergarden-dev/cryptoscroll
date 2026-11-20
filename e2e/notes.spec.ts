@@ -230,7 +230,11 @@ test("revokes a protected note only after confirmation and a correct passphrase"
     ),
   );
   await page.goto("/");
-  await page.getByLabel("Your secret note").fill("A disposable protected note for revocation.");
+  const editor = page.getByLabel("Your secret note");
+  const message = "A disposable protected note for revocation.";
+  await editor.click();
+  await editor.pressSequentially(message);
+  await expect(editor).toHaveValue(message);
   await page.getByText("1h", { exact: true }).click();
   await page.getByRole("button", { name: "Add a passphrase Optional" }).click();
   await page.getByLabel("Passphrase", { exact: true }).fill(passphrase);

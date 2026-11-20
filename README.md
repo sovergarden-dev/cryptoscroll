@@ -8,6 +8,8 @@ CryptoScroll is a browser-encrypted dead drop for sensitive Markdown notes. Writ
 
 ## Use it
 
+On a small screen, **Write a note** moves focus to the editor. Once a recipient has opened a note, **Show original text** reveals its literal characters and line breaks. **Copy original text** sends the decrypted string to the device clipboard on request. Clearing the screen leaves clipboard contents under the device's control.
+
 1. Write up to 32 KiB of UTF-8 text. Markdown headings, lists, links, blockquotes and code blocks work.
 2. Choose **After first read**, **1h**, **24h**, **72h**, **7d** or **30d**. One-time mode has a separate unread deadline: 1h to 30d, defaulting to 24h for new UI creations. Existing links retain their stored deadlines.
 3. Optionally add a long passphrase and share that passphrase through another channel.
@@ -196,6 +198,8 @@ For your own instance, set `VITE_API_URL` **at build time** to your deployed HTT
 Lovable publishes a snapshot: Git updates reach the editor, but require **Publish → Publish changes** to update the live frontend. See [Lovable's publishing guide](https://docs.lovable.dev/features/publish).
 
 ## Verification
+
+Send security reports through the private channel in [SECURITY.md](SECURITY.md).
 
 ```sh
 npm test

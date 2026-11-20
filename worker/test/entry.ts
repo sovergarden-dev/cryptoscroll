@@ -12,6 +12,12 @@ export class NoteVault extends ProductionNoteVault {
       ...env,
       NOTES_KV: new Proxy(env.NOTES_KV, {
         get(target, property) {
+          if (property === "delete")
+            return async (key: string) => {
+              if (await fixtureState.storage.get<boolean>("hold-delete"))
+                throw new Error("Fixture storage cleanup is unavailable");
+              return target.delete(key);
+            };
           if (property === "put")
             return async (...args: Parameters<KVNamespace["put"]>) => {
               const fault = await fixtureState.storage.get<string>("fail-write");
@@ -32,6 +38,14 @@ export class NoteVault extends ProductionNoteVault {
 
   override async fetch(request: Request): Promise<Response> {
     const path = new URL(request.url).pathname;
+    if (path === "/fixture/check-alarm") {
+      const scheduled = await this.fixtureState.storage.getAlarm();
+      return new Response(null, { status: scheduled === null ? 404 : 204 });
+    }
+    if (path === "/fixture/pause-delete" || path === "/fixture/resume-delete") {
+      await this.fixtureState.storage.put("hold-delete", path.endsWith("pause-delete"));
+      return new Response(null, { status: 204 });
+    }
     if (path === "/fixture/fail-write" || path === "/fixture/fail-after-write") {
       await this.fixtureState.storage.put(
         "fail-write",

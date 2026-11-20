@@ -79,8 +79,9 @@ export class NoteVault implements DurableObject {
     }
 
     if (request.method === "DELETE") {
-      await this.retire(note, "destroyed");
-      return json({ success: true });
+      return (await this.retire(note, "destroyed"))
+        ? json({ success: true })
+        : this.cleanupPending();
     }
 
     const payload = await this.env.NOTES_KV.get<EncryptedPayload>(note.id, "json");
@@ -90,7 +91,7 @@ export class NoteVault implements DurableObject {
         "Encrypted storage is temporarily unavailable. The note has not been opened.",
         503,
       );
-    if (note.burnAfterRead) await this.retire(note, "destroyed");
+    if (note.burnAfterRead && !(await this.retire(note, "destroyed"))) return this.cleanupPending();
     return json({ ...metadata(note), ...payload });
   }
 
@@ -149,7 +150,14 @@ export class NoteVault implements DurableObject {
     return json({ id: pending.id, expiresAt: pending.expiresAt }, 201);
   }
 
-  private async retire(note: ActiveNote | PendingNote, kind: RetiredNote["kind"]): Promise<void> {
+  private cleanupPending(): Response {
+    return failure("UNAVAILABLE", "The note is closed. Encrypted storage cleanup is pending.", 503);
+  }
+
+  private async retire(
+    note: ActiveNote | PendingNote,
+    kind: RetiredNote["kind"],
+  ): Promise<boolean> {
     const retired: RetiredNote = {
       kind,
       id: note.id,
@@ -158,12 +166,19 @@ export class NoteVault implements DurableObject {
     };
     await this.state.storage.put("note", retired);
     await this.state.storage.setAlarm(Date.now() + 1000);
-    await this.finishCleanup(retired);
+    // Keep retirement and its cleanup alarm durable if the following KV call throws.
+    await this.state.storage.sync();
+    return this.finishCleanup(retired);
   }
 
-  private async finishCleanup(note: RetiredNote): Promise<void> {
+  private async finishCleanup(note: RetiredNote): Promise<boolean> {
     if (!note.kvDeleted) {
-      await this.env.NOTES_KV.delete(note.id);
+      try {
+        await this.env.NOTES_KV.delete(note.id);
+      } catch {
+        // The alarm already owns the next attempt. Leave the note closed.
+        return false;
+      }
       await this.state.storage.put("note", { ...note, kvDeleted: true });
     }
     if (note.forgetAt <= Date.now()) {
@@ -172,6 +187,7 @@ export class NoteVault implements DurableObject {
     } else {
       await this.state.storage.setAlarm(note.forgetAt);
     }
+    return true;
   }
 
   async alarm(): Promise<void> {
@@ -182,7 +198,10 @@ export class NoteVault implements DurableObject {
         if (Date.parse(note.expiresAt) <= Date.now()) await this.retire(note, "expired");
         else await this.state.storage.setAlarm(Date.parse(note.expiresAt));
       } else {
-        if (!note.kvDeleted) await this.state.storage.setAlarm(Date.now() + 60_000);
+        if (!note.kvDeleted) {
+          await this.state.storage.setAlarm(Date.now() + 60_000);
+          await this.state.storage.sync();
+        }
         await this.finishCleanup(note);
       }
     });
