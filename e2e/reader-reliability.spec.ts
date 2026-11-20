@@ -49,8 +49,34 @@ test("jumps directly to the mobile editor and copies the exact decrypted text lo
     await view.click();
     expect(await article.textContent()).toBe(original);
     await view.click();
-    await copy.click();
-    await expect(reader.getByRole("status")).toContainText("Select the original text");
+    await copy.focus();
+    await reader.keyboard.press("Enter");
+    await expect(reader.getByRole("status")).toContainText("Original text selected");
+    const selected = reader.getByRole("textbox", { name: "Original note text" });
+    await expect(selected).toBeFocused();
+    expect(
+      await selected.evaluate((element) => {
+        const field = element as HTMLTextAreaElement;
+        return field.value.slice(field.selectionStart, field.selectionEnd);
+      }),
+    ).toBe(original);
+    await reader.evaluate(() =>
+      document.addEventListener(
+        "copy",
+        (event) => {
+          (window as unknown as Record<string, unknown>)["manualCopyFixture"] =
+            event.clipboardData?.getData("text/plain");
+          event.preventDefault();
+        },
+        { once: true },
+      ),
+    );
+    await reader.keyboard.press("ControlOrMeta+c");
+    expect(
+      await reader.evaluate(
+        () => (window as unknown as Record<string, unknown>)["manualCopyFixture"],
+      ),
+    ).toBe(original);
     expect(await article.textContent()).toBe(original);
     expect(reads).toBe(1);
     await reader.getByRole("button", { name: "Clear this screen" }).click();

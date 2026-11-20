@@ -132,6 +132,7 @@ export default {
       );
     }
     const headers = new Headers(response.headers);
+    headers.set("Date", new Date().toUTCString());
     headers.set("Cache-Control", "no-store");
     headers.set("X-Content-Type-Options", "nosniff");
     headers.set("Referrer-Policy", "no-referrer");
@@ -139,7 +140,7 @@ export default {
     if (origin) {
       headers.set("Access-Control-Allow-Origin", origin);
       headers.set("Access-Control-Allow-Methods", METHODS);
-      headers.set("Access-Control-Expose-Headers", "Retry-After");
+      headers.set("Access-Control-Expose-Headers", "Retry-After, Date");
       headers.set(
         "Access-Control-Allow-Headers",
         "Content-Type, Authorization, X-Passphrase-Proof",

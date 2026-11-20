@@ -35,6 +35,7 @@ it("replaces a caller-supplied nonce before the renderer receives the request", 
   expect(nonce).not.toBe("caller-controlled");
   expect(response.headers.get("Content-Security-Policy")).toContain(`'nonce-${nonce}'`);
   expect(response.headers.get("Cache-Control")).toBe("no-store");
+  expect(response.headers.get("Vary")).toContain("Accept-Language");
   expect(response.headers.get("Referrer-Policy")).toBe("no-referrer");
 });
 

@@ -14,6 +14,12 @@ export function secureDocument(response: Response, request: Request, nonce: stri
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
   if (headers.get("Content-Type")?.includes("text/html")) {
     headers.set("Cache-Control", "no-store");
+    const vary = (headers.get("Vary") ?? "")
+      .toLowerCase()
+      .split(",")
+      .map((value) => value.trim());
+    if (!vary.includes("*") && !vary.includes("accept-language"))
+      headers.append("Vary", "Accept-Language");
     if (import.meta.env.PROD) {
       const frontend = new URL(request.url);
       const apiOrigin = new URL(getApiBase(frontend.origin, import.meta.env.VITE_API_URL)).origin;

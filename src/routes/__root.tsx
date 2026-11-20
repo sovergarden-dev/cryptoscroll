@@ -12,6 +12,7 @@ import { Shell } from "../components/Shell";
 import { NoteStatus } from "../components/NoteStatus";
 import { LanguageProvider } from "../components/LanguageProvider";
 import { useI18n } from "../lib/i18n";
+import type { Language } from "../lib/language";
 
 import appCss from "../styles.css?url";
 
@@ -57,7 +58,10 @@ function ErrorComponent({ reset }: ErrorComponentProps) {
   );
 }
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+export const Route = createRootRouteWithContext<{
+  queryClient: QueryClient;
+  initialLanguage: Language;
+}>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -85,13 +89,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  const { initialLanguage } = useRouter().options.context;
   return (
-    <html lang="en" className="dark">
+    <html lang={initialLanguage} className="dark">
       <head>
         <HeadContent />
       </head>
       <body>
-        <LanguageProvider>{children}</LanguageProvider>
+        <LanguageProvider initialLanguage={initialLanguage}>{children}</LanguageProvider>
         <Scripts />
       </body>
     </html>

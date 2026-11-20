@@ -25,6 +25,8 @@
 
 ### Fixed
 
+- Preserve oversized input and report the excess in UTF-8 bytes. Select the full original note for keyboard copying when clipboard access is denied.
+- Recheck waiting notes against server time at expiry and when the tab returns. Negotiate English or Vietnamese on first load and preserve the user's in-session choice.
 - Distinguish timed and one-time read errors, mark incorrect passphrases separately, honor creation cooldowns after discard, and release expired pending secrets once in-flight creation finishes.
 - Enable the language selector once the page is interactive so an early choice of Vietnamese survives startup.
 - Pin the frontend runtime compatibility date to November 14, 2026 so rebuilding on a later day still works with the locked Worker runtime.
