@@ -92,7 +92,7 @@ export function RevokeNoteDialog({
                 }
                 className="mt-2 w-full rounded-lg border bg-background p-3 font-mono text-sm"
               />
-              <p id="revoke-passphrase-help" className="mt-2 text-xs text-muted-foreground">
+              <p id="revoke-passphrase-help" className="mt-2 text-sm text-foreground">
                 {t("revokePassphraseHelp")}
               </p>
             </div>
