@@ -18,7 +18,7 @@ After opening, the recipient can read the in-memory copy until leaving or cleari
 
 The sharing screen also offers **Revoke note**, with explicit confirmation and passphrase re-entry for protected notes. It invalidates the stored copy, not copies already kept by recipients. Network failure is reported as uncertain, and destructive reads are never retried automatically.
 
-If creation acknowledgement is lost, **Retry this creation** resubmits the same encrypted envelope for up to ten minutes in the same tab. It does not create a second note or revive a consumed one. Reloading/leaving loses the temporary key; discarding the attempt does not revoke a stored copy. English and Vietnamese are selectable in the header, with no saved locale or secret state. These follow-up features are implemented locally; see [verification and publication status](docs/ref/product-followup-verification.md) before assuming they are on the public site.
+If the creation reply is lost, **Retry this creation** resubmits the same encrypted envelope for up to ten minutes in the same tab. A consumed note stays destroyed. Reloading or leaving loses the temporary key. If you discard the attempt after the service has stored a copy, that copy can remain until expiry. You can switch between English and Vietnamese in the header. The language choice lasts for the current page session. [Production checks and device coverage](docs/ref/product-followup-verification.md)
 
 ## Run locally
 

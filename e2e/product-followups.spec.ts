@@ -118,7 +118,15 @@ test("keeps the full capability in native sharing and a decodable downloaded PNG
 test("supports Vietnamese, accessible state transitions and unchanged links while switching language", async ({
   page,
   browser,
+  appOrigin,
 }, testInfo) => {
+  const serverPage = await browser.newPage({ javaScriptEnabled: false });
+  try {
+    await serverPage.goto(appOrigin);
+    await expect(serverPage.getByLabel("Language / Ngôn ngữ")).toBeDisabled();
+  } finally {
+    await serverPage.close();
+  }
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/");
   await page.getByLabel("Language / Ngôn ngữ").selectOption("vi");

@@ -1,10 +1,11 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useHydrated } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Github, ShieldCheck } from "lucide-react";
 import { useI18n, type Language } from "@/lib/i18n";
 
 export function Shell({ children }: { children: ReactNode }) {
   const { t, language, setLanguage } = useI18n();
+  const hydrated = useHydrated();
   return (
     <div className="relative mx-auto flex min-h-svh max-w-6xl flex-col px-5 sm:px-8">
       <button
@@ -36,8 +37,9 @@ export function Shell({ children }: { children: ReactNode }) {
             <span className="sr-only">Language / Ngôn ngữ</span>
             <select
               value={language}
+              disabled={!hydrated}
               onChange={(event) => setLanguage(event.target.value as Language)}
-              className="min-h-11 rounded-md border bg-background px-2 text-foreground"
+              className="min-h-11 rounded-md border bg-background px-2 text-foreground disabled:opacity-50"
             >
               <option value="en" lang="en">
                 English

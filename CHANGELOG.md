@@ -7,7 +7,7 @@
 - Configurable unread deadlines for one-time notes, with a 24-hour default for new UI creations and unchanged existing links.
 - Bounded, explicit creation recovery using a timestamped independent nonce, a per-note durable pending record and an in-memory encrypted browser request; consumed/expired notes cannot be recreated by a retry.
 - English/Vietnamese note flows, native mobile sharing with cancellation/fallback handling, and local PNG QR export.
-- Recovery/concurrency fault tests, downloaded-QR decoding, accessibility scans and focus-transition checks; external review scope and separate follow-up acceptance records.
+- Verified creation recovery, one-time reads, revocation and downloaded QR handoff on the published Worker and frontend, including transfers between Chromium and WebKit mobile profiles. [Verification and device coverage](docs/ref/product-followup-verification.md)
 - Anonymous creation throttling before storage, with typed 429 responses and a daily HMAC network bucket; no raw address is stored in application data.
 - Confirmed sender-side revocation with passphrase re-entry, keyboard focus and truthful network-failure feedback.
 - Production CSP nonces, content-free server error logging, compiled-Worker acceptance across Chromium/Firefox/WebKit, and separate read-only/live-synthetic verification commands.
@@ -24,6 +24,8 @@
 
 ### Fixed
 
+- Enable the language selector once the page is interactive so an early choice of Vietnamese survives startup.
+- Pin the frontend runtime compatibility date to November 14, 2026 so rebuilding on a later day still works with the locked Worker runtime.
 - Pin Playwright to the last working 1.64.1 release for the upstream Firefox ARIA-reflection regression; retain native application labels and restore Firefox accessibility audits on every platform.
 - Refresh the aggregate note count within the same session and recover after transient count failures.
 - Focus warning, sealed, read and cleared states; translate errors by stable codes while preserving uncertain-read/revocation warnings.

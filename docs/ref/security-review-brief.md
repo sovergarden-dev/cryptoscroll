@@ -1,6 +1,6 @@
 # External security review brief
 
-Status: prepared for review; no external reviewer has been engaged and no independent audit is claimed. This brief covers the changes after published baseline `335ec0a` on `codex/reliability-mobile-i18n`. Freeze the exact commit and dependency locks before commissioning a review. Kiro/hackathon work is outside scope. Cost alerts were withdrawn by the owner on 2026-11-14.
+An independent review is pending. The review target is the published application at commit `bbf4518ca31a8deb64f580f4f7d0088b1ff7642a`, following hardening baseline `335ec0a`. Use the root `package-lock.json`, `worker/package-lock.json` and `bun.lock` from that commit to reproduce the dependency set. [Pinned source and lockfiles](https://github.com/sovergarden-dev/cryptoscroll/tree/bbf4518ca31a8deb64f580f4f7d0088b1ff7642a)
 
 ## Scope and invariants
 
