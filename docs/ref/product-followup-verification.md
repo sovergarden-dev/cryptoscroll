@@ -1,6 +1,6 @@
 # Product follow-up verification
 
-The follow-up from `bbf4518` is live. The deployed API passed its synthetic checks on November 14, 2026, and the published frontend passed its Chromium checks on November 18. Linux CI passed 52 unit and integration tests and 24 browser scenarios across Chromium, Firefox and WebKit, including the Firefox accessibility audit. [Merge CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/43589898896)
+The published frontend is `06e0c0b`. It includes the language-selector correction to the November 14 follow-up (`bbf4518`). The API passed its synthetic checks on November 14, 2026, and the initial follow-up frontend passed its Chromium checks on November 18. Both frontend revisions passed 52 unit and integration tests and 24 browser scenarios in Linux CI. [November 14 CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/43589898896) · [November 20 CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/44711406531)
 
 The table records the local implementation checks of November 14. Production checks and the device coverage are recorded below. The recovery design and the scope for independent review are available separately. [Creation recovery](../research/creation-recovery.md) · [Review brief](security-review-brief.md)
 
@@ -38,6 +38,14 @@ The first fault-injection test exposed buffered pending-state loss when the obje
 - **Mobile browser profiles, November 20.** Chromium and WebKit each downloaded a QR PNG and opened the other browser's protected fixture through its decoded link. Both one-time notes reached HTTP 410. A separate cold-load check on WebKit exposed an early language selection reverting to English during startup. The QR handoffs used the interactive editor. [Device coverage](device-acceptance.md#follow-up-build)
 
 The owner elected to skip manual phone testing for this release. The remaining OS integration coverage and external review scope are recorded separately. [Device coverage](device-acceptance.md) · [External review brief](security-review-brief.md)
+
+## Language selection at startup
+
+On the November 14 frontend, the WebKit iPhone profile accepted a selection of Vietnamese while the editor was still loading. Once the client started, the selection reverted to English. The regression check failed against that build because the server-rendered selector was enabled. The fix uses TanStack Router's hydration state to enable the selector when it can apply the user's choice. A clean build also exposed Nitro deriving its compatibility date from the calendar. Pinning the frontend to November 14 restored startup with the locked `workerd`.
+
+All 24 local browser scenarios passed with the fix. The first Linux PR job timed out while downloading Ubuntu packages for Playwright. The second attempt ran all tests on the same commit and passed, as did the run on the merged source. [PR #3](https://github.com/sovergarden-dev/cryptoscroll/pull/3) · [PR CI, attempt 2](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/44708493896/attempts/2) · [Main CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/44711406531)
+
+After publication, both mobile profiles found the selector disabled in the initial HTML and successfully switched the interactive site to Vietnamese. The first QR run reached its 18-second click timeout in the WebKit recipient. Cleanup verified HTTP 410 for its fixture. The repeat run kept the same timeout and completed both directions, including a wrong passphrase, a correct read, clearing the display and reopening the destroyed link. Both repeat fixtures also returned 410. The first timeout's cause was undetermined.
 
 ## Firefox scanner regression and tooling pin
 

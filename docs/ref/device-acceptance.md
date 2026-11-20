@@ -25,6 +25,8 @@ After testing, revoke any timed synthetic notes using the sender's sharing scree
 
 On November 20, 2026, two live handoffs passed on the published follow-up build (`bbf4518`). Playwright used the Pixel 7 profile in Chromium and the iPhone 13 profile in WebKit on Windows. Each profile created one protected Vietnamese test note and downloaded its QR PNG. An offline decoder recovered the complete private link from the PNG bytes and opened it in the other browser. Both readers rejected an incorrect passphrase, opened the note with the correct one, preserved focus on the relevant status, cleared the text and showed the destroyed state on reload. The reader fit portrait and landscape viewports. Both fixture metadata endpoints returned HTTP 410 at cleanup.
 
+The same two profiles verified language selection and repeated the QR handoffs after the corrected frontend (`06e0c0b`) went live. [Post-publication results](product-followup-verification.md#language-selection-at-startup)
+
 The owner elected to skip manual phone testing on this release. The Android and iPhone/iPad results from November 14 apply to the earlier hardening build. OS share sheets, camera scanning, the phone's handling of downloaded files, and spoken TalkBack or VoiceOver output remain unverified for the follow-up. For a future physical run, record the model, OS, browser, date and observations for each of the following steps.
 
 1. Switch English/Vietnamese through create, warning, read, clear and revoke. With TalkBack/VoiceOver enabled, confirm headings, warnings, field labels, errors and focus order are understandable; enlarge text and rotate the device.

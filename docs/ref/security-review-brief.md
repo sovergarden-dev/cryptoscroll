@@ -1,6 +1,6 @@
 # External security review brief
 
-An independent review is pending. The review target is the published application at commit `bbf4518ca31a8deb64f580f4f7d0088b1ff7642a`, following hardening baseline `335ec0a`. Use the root `package-lock.json`, `worker/package-lock.json` and `bun.lock` from that commit to reproduce the dependency set. [Pinned source and lockfiles](https://github.com/sovergarden-dev/cryptoscroll/tree/bbf4518ca31a8deb64f580f4f7d0088b1ff7642a)
+An independent review is pending. The published frontend is commit `06e0c0bc9248bbea2e06ceef403e47eebe21f9eb`. The API was deployed from `bbf4518`, and its source and dependency locks match those in the frontend commit. The hardening baseline is `335ec0a`. Use the root `package-lock.json`, `worker/package-lock.json` and `bun.lock` at the pinned revision to reproduce the dependency set. [Pinned source and lockfiles](https://github.com/sovergarden-dev/cryptoscroll/tree/06e0c0bc9248bbea2e06ceef403e47eebe21f9eb)
 
 ## Scope and invariants
 
