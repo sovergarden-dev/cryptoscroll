@@ -2,6 +2,8 @@
 
 The application and API are deployed separately. A successful GitHub check does not publish Lovable. Use the verified source commit and Worker version in the deployment record; publish the frontend snapshot after the API is ready, then check both on their actual hosts.
 
+The frontend uses the Cloudflare compatibility date in `nitro.config.ts`. When advancing it, check the generated `.output/server/wrangler.json` and run the compiled browser suite against the project's locked `workerd`. The API has its own compatibility date in `worker/wrangler.toml`.
+
 ## Creation admission secret
 
 Production requires a `CREATION_LIMIT_SALT` secret containing 32 cryptographically random bytes encoded as standard base64. Provision it with Wrangler's secret input before deploying the creation limiter. Keep the value out of Git, shell history and command arguments. Each environment needs its own value. The development command's constant is a public fixture only; it is not a production secret.
