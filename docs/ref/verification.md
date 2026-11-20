@@ -1,6 +1,6 @@
 # Local verification
 
-Historical record of the initial implementation and API correction. Current published evidence is in [hardening verification](hardening-verification.md) and [device acceptance](device-acceptance.md); newer, unpublished changes are recorded in [follow-up verification](product-followup-verification.md). Counts and initial failures below describe their original stage.
+Historical record of the initial implementation and API correction. Subsequent published evidence is in [hardening verification](hardening-verification.md), [follow-up verification](product-followup-verification.md), [deployment acceptance](deployment.md) and [device acceptance](device-acceptance.md). Counts and initial failures below describe their original stage.
 
 Verified during 2026-11-13–14 on Windows, using Node 22.22.0, npm 11.18.0, Wrangler 4.161.0 and Chromium 158. The source baseline was `c2c5690`; implementation commit `3d528c1` passed [GitHub CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/43474649977). The initial source-delivery evidence below predates provisioning. Later production checks are recorded separately in [deployment acceptance](deployment.md); neither record proves a completed hackathon entry.
 

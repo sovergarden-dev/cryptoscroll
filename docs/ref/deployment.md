@@ -1,6 +1,6 @@
 # Production deployment and acceptance
 
-Updated 2026-11-14. All live checks below used disposable synthetic notes; no existing user note was opened or removed.
+Updated November 20, 2026. Every check that exercised a note used a disposable test fixture.
 
 ## Hosting
 
@@ -9,7 +9,8 @@ Updated 2026-11-14. All live checks below used disposable synthetic notes; no ex
 - Cloudflare bindings: `NOTES_KV`, `NOTE_VAULT`, `NOTE_COUNTER` and `CREATION_LIMITER`. `CREATION_LIMIT_SALT` is provisioned as a Worker secret. Account/namespace IDs are in `worker/wrangler.toml`; credential and secret values are not in the repository.
 - Initial API version: `4ff79d80-b6ce-475c-a902-bce122212174`.
 - Previous API version after updating the frontend/preview origin allowlist: `141e42e1-a737-42eb-b0b5-2b2e76697c09`.
-- Current hardened API version: `c477817a-6ff5-4edd-a8de-e100c63db795`, deployed from the implementation merged through [PR #1](https://github.com/sovergarden-dev/cryptoscroll/pull/1).
+- Hardened API version: `c477817a-6ff5-4edd-a8de-e100c63db795`, deployed from the implementation merged through [PR #1](https://github.com/sovergarden-dev/cryptoscroll/pull/1).
+- Current API version: `3e3695d2-1b36-42df-b204-cc0e79668a4b`, deployed from the follow-up implementation merged through [PR #2](https://github.com/sovergarden-dev/cryptoscroll/pull/2) (`bbf4518`).
 
 The main domain currently resolves directly to Lovable. A Cloudflare Worker route requires a [proxied DNS record](https://developers.cloudflare.com/workers/configuration/routing/routes/), so `/api` on that host is not the active backend. Hosted frontend builds use the dedicated Worker endpoint. Local loopback development retains the `/api` proxy; `VITE_API_URL` overrides either default. Shared note links retain the frontend origin and fragment-only key.
 
@@ -52,3 +53,11 @@ The live read-only checker passed frontend status, fresh CSP nonces, API connect
 The actual published revocation UI was also exercised: cancellation kept the note available, a wrong passphrase showed an error, the correct passphrase returned the revoked state with keyboard focus on its heading, and the recipient link then showed the destroyed state. This additional synthetic browser note was revoked.
 
 The owner subsequently confirmed the requested QR, clipboard, protected-read, timed-read, revoke and navigation/layout checks on Android and iPhone/iPad. See [device acceptance](device-acceptance.md) for the evidence scope. An hourly read-only Codex heartbeat named `Theo dõi CryptoScroll` is active, reporting only confirmed meaningful state changes. It does not create, consume or delete notes. Checks and recovery are described in [operations](operations.md).
+
+## Follow-up publication
+
+Source `bbf4518` ([PR #2](https://github.com/sovergarden-dev/cryptoscroll/pull/2)) passed [PR CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/43589377381) and [main CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/43589898896) with 52 unit/integration tests and 24 browser scenarios across Chromium, Firefox and WebKit, including `accessibility-firefox`.
+
+Worker `3e3695d2-1b36-42df-b204-cc0e79668a4b` was deployed first and passed the opted-in live API smoke: creation recovery (`200`), changed-envelope conflict (`409`), retired-note replay (`410`), wrong-proof preservation (`403`), one success across twelve concurrent reads, timed rereading/revocation, legacy envelopes without `creationToken`, and unapproved-origin rejection (`403`).
+
+The owner then published `bbf4518` in Lovable. Chromium exercised the published sharing, reading, revocation and creation-recovery flows on November 18. On November 20 the read-only service check passed and the public homepage served the Vietnamese editor and all five unread deadlines. [Browser and privacy observations](product-followup-verification.md#publication-and-live-acceptance) · [Device coverage](device-acceptance.md)

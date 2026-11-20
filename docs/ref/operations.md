@@ -24,10 +24,10 @@ A regular monitor should run only this command, stay quiet while healthy, and no
 npm run smoke:live -- --frontend https://cryptoscroll.syrin.online/ --api https://cryptoscroll-worker.thongdocnganhang1.workers.dev/api --allow-synthetic-writes
 ```
 
-This is an explicitly opted-in live operation, outside the default tests and routine monitor. It creates three synthetic notes, checks incorrect proof preservation, successful decryption, one success across twelve simultaneous reads, timed rereading and authenticated revocation. Cleanup consumes or revokes its own notes. Fixtures expire within five minutes if a response is lost before the script learns their ID; no unknown note is deleted. Aggregate creation counts and normal terminal markers remain.
+This opt-in check creates four disposable notes on the target API. It checks protected creation and recovery, a one-time read under concurrency, timed rereading and revocation, and a legacy envelope. The script requests a five-minute lifetime for each fixture and cleans up known notes. A lost creation acknowledgement can leave a fixture until expiry. Aggregate creation counts and normal terminal markers remain.
 
 Follow the [physical-device checklist](device-acceptance.md) after a frontend release. Use synthetic data, and record actual Android and iPhone/iPad outcomes separately from browser-engine automation.
 
 ## Recovery
 
-If new-note creation fails while existing reads work, inspect admission configuration first. Restore a known-good Worker version if necessary; do not delete KV, remove Durable Object migrations or reset consumed state. If a new frontend fails CSP/hydration, republish the previous working Lovable snapshot and retain the stricter policy only after its compatibility is verified. Source rollback uses a new revert commit, never rewritten published history.
+If new-note creation fails while existing reads work, inspect the admission configuration first. For a Worker rollback, choose a version that understands the deployed pending-creation format and preserves consumed markers. If the earlier version predates creation recovery, fix the current Worker forward. For a frontend CSP or hydration failure, republish a verified Lovable snapshot and recheck the live site. Use a new revert commit for source rollback. [Creation recovery and deployment order](../research/creation-recovery.md)

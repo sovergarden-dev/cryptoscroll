@@ -1,6 +1,6 @@
 # Product follow-ups
 
-Status: approved for implementation by the owner on 2026-11-14. Work is on `codex/reliability-mobile-i18n`; this plan is not a production-deployment receipt. Keep the account-free, browser-encrypted handoff as the product boundary. The owner subsequently withdrew cost alerts; no billing-alert or spending-limit change is planned.
+The approved follow-ups shipped from `bbf4518` through Lovable and Worker `3e3695d2-1b36-42df-b204-cc0e79668a4b`. The published API and frontend passed synthetic checks. The owner withdrew cost alerts on November 14 and chose to skip manual phone testing on November 20. An independent security review remains open. [PR #2](https://github.com/sovergarden-dev/cryptoscroll/pull/2) · [Verification](../ref/product-followup-verification.md) · [Deployment](../ref/deployment.md)
 
 | Priority | Proposal                                              | Benefit and constraint                                                                                                                                                                         | Acceptance before shipping                                                                                                                                                    |
 | -------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -18,11 +18,11 @@ Status: approved for implementation by the owner on 2026-11-14. Work is on `code
 - [x] Add native share with cancellation/fallback handling and local PNG QR download.
 - [x] Translate the note flow into English/Vietnamese; keep the language preference in memory and update the document language.
 - [x] Focus warning, result and cleared-state headings; announce failures and operation status.
-- [x] Complete local automated, browser, screenshot and security checks; record exact results and the Windows Firefox scanner limitation in [follow-up verification](../ref/product-followup-verification.md).
+- [x] Complete local automated, browser, screenshot and security checks and document the Firefox scanner fix. [Follow-up verification](../ref/product-followup-verification.md)
 - [x] Obtain the owner's explicit authorization to commit/push and deploy after successful CI.
-- [ ] Run the final changes through Linux CI, including its Firefox accessibility audit gate.
-- [ ] Publish the compatible Worker before the frontend, then verify the changed live flows.
-- [ ] Confirm new share/PNG/TalkBack/VoiceOver flows on physical devices; previous device acceptance applies to the published hardening build.
+- [x] Run the final changes through Linux CI, including its Firefox accessibility audit gate.
+- [x] Publish the compatible Worker before the frontend, then verify the changed live flows.
+- [x] Verify QR handoff in both directions between Chromium and WebKit mobile profiles on the public site. Physical share sheets, camera and screen readers remain unverified for this release. [Device coverage](../ref/device-acceptance.md#follow-up-build)
 - [ ] Obtain an external review using the [review brief](../ref/security-review-brief.md).
 
 Documentation corrections distinguish the original verification stage from current published evidence. Kiro/hackathon work remains deferred.

@@ -21,14 +21,14 @@ Use synthetic text only, for example `Device check — tiếng Việt 🔐`. Rec
 
 After testing, revoke any timed synthetic notes using the sender's sharing screen. If that screen was closed, note their expiry and do not treat them as cleaned up before they expire or authenticated revocation succeeds.
 
-## Follow-up build: pending physical acceptance
+## Follow-up build
 
-The results above cover the published hardening build, not the newer unpublished creation-recovery, language, share or PNG features. After the follow-up is published, record device model, OS/browser version, date and results for:
+On November 20, 2026, two live handoffs passed on the published follow-up build (`bbf4518`). Playwright used the Pixel 7 profile in Chromium and the iPhone 13 profile in WebKit on Windows. Each profile created one protected Vietnamese test note and downloaded its QR PNG. An offline decoder recovered the complete private link from the PNG bytes and opened it in the other browser. Both readers rejected an incorrect passphrase, opened the note with the correct one, preserved focus on the relevant status, cleared the text and showed the destroyed state on reload. The reader fit portrait and landscape viewports. Both fixture metadata endpoints returned HTTP 410 at cleanup.
+
+The owner elected to skip manual phone testing on this release. The Android and iPhone/iPad results from November 14 apply to the earlier hardening build. OS share sheets, camera scanning, the phone's handling of downloaded files, and spoken TalkBack or VoiceOver output remain unverified for the follow-up. For a future physical run, record the model, OS, browser, date and observations for each of the following steps.
 
 1. Switch English/Vietnamese through create, warning, read, clear and revoke. With TalkBack/VoiceOver enabled, confirm headings, warnings, field labels, errors and focus order are understandable; enlarge text and rotate the device.
 2. Use Share link, cancel once, then send a synthetic link to the other device. Verify the complete key survives the chosen sharing app and the link still requires explicit reading. Unsupported sharing must retain Copy link/manual copy.
 3. Save QR image, locate the PNG in the device's download/photo workflow, and scan the saved image from the other device. Confirm it opens the intended synthetic note; delete the test image after use.
 4. Select a one-hour unread deadline in one-time mode. Verify the displayed expiry and wrong/right passphrase behavior. Automated local alarms cover expiry timing; do not claim a physical one-hour wait unless performed.
 5. Interrupt creation connectivity, restore it and use Retry this creation in the same tab. Check that the form does not falsely claim success, that the recovered link works, and that a completed one-time read cannot be recovered by retrying creation.
-
-Status: not yet performed for the follow-up build. Automated sharing/clipboard stubs and axe scans do not constitute OS integration or screen-reader acceptance.
