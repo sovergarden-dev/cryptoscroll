@@ -1,5 +1,7 @@
 import { test, expect } from "./fixtures";
 
+test.use({ locale: "en-US", timezoneId: "UTC" });
+
 test("keeps an independent receipt for later revocation in a separate browser", async ({
   page,
   browser,
@@ -11,6 +13,12 @@ test("keeps an independent receipt for later revocation in a separate browser", 
   await page.getByLabel("Passphrase", { exact: true }).fill("separate fixture");
   await page.getByRole("button", { name: "Create Note", exact: true }).click();
   const reading = await page.getByLabel("Your private link").inputValue();
+  const suffix = new URL(reading).pathname.slice(-8).toUpperCase();
+  const reference = suffix.slice(0, 4) + "-" + suffix.slice(4);
+  await expect(page.getByText(reference, { exact: true })).toBeVisible();
+  const expiry = await page.locator("time").getAttribute("datetime");
+  expect(expiry).toBeTruthy();
+  await expect(page.locator("time")).toContainText(/(?:UTC|GMT)(?:\+0(?::00)?)?$/);
   await expect(page.getByLabel("Sender’s revocation receipt")).toHaveCount(0);
   await page.getByRole("button", { name: "Keep a revocation receipt" }).click();
   const receipt = await page.getByLabel("Sender’s revocation receipt").inputValue();
@@ -19,7 +27,7 @@ test("keeps an independent receipt for later revocation in a separate browser", 
   expect(new URL(reading).hash.slice(1) === token).toBe(false);
   expect(new URL(receipt).pathname).toMatch(/^\/revoke\/[a-f0-9]{32}$/);
   await page.close();
-  const next = await browser.newContext();
+  const next = await browser.newContext({ locale: "en-US", timezoneId: "Asia/Ho_Chi_Minh" });
   try {
     const management = await next.newPage();
     let reads = 0,
@@ -35,6 +43,9 @@ test("keeps an independent receipt for later revocation in a separate browser", 
     await management.goto(receipt);
     await expect(management.getByRole("heading", { name: "Revoke a sent note" })).toBeFocused();
     await expect(management.getByRole("article")).toHaveCount(0);
+    await expect(management.getByText(reference, { exact: true })).toBeVisible();
+    await expect(management.locator("time")).toHaveAttribute("datetime", expiry!);
+    await expect(management.locator("time")).toContainText(/GMT\+7/);
     await management.getByRole("button", { name: "Revoke note", exact: true }).click();
     await management.getByRole("button", { name: "Keep note" }).click();
     expect(deletions).toBe(0);
@@ -44,6 +55,9 @@ test("keeps an independent receipt for later revocation in a separate browser", 
     await expect(recipient.getByRole("button", { name: "Revoke note" })).toHaveCount(0);
     await management.getByRole("button", { name: "Revoke note", exact: true }).click();
     const dialog = management.getByRole("alertdialog");
+    await expect(dialog.getByText(reference, { exact: true })).toBeVisible();
+    await expect(dialog.locator("time")).toHaveAttribute("datetime", expiry!);
+    await expect(dialog.locator("time")).toContainText(/GMT\+7/);
     await dialog.getByLabel("Passphrase to revoke").fill("incorrect fixture");
     await dialog.getByRole("button", { name: "Revoke note", exact: true }).click();
     await expect(dialog.getByRole("alert")).toContainText("Wrong passphrase");

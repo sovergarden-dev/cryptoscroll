@@ -70,6 +70,8 @@ export const en = {
   privateLink: "Your private link",
   keepReceipt: "Keep a revocation receipt",
   receiptLink: "Sender’s revocation receipt",
+  noteReference: "Note reference",
+  receiptUnreadUntil: "Expires if unopened",
   receiptHelp:
     "Keep this link for yourself to revoke the note later. Share the reading link above with your recipient.",
   copyReceipt: "Copy revocation receipt",
@@ -94,7 +96,6 @@ export const en = {
   qrError: "The QR image could not be saved. Use Copy link instead.",
   qrPrivacy: "The saved image contains the private link and key. Keep it private.",
   expires: "Expires",
-  expiresOnce: ", or on the first authorized read.",
   protected: "Passphrase protected",
   onceWarning: "This link can only be opened once. Share it only with the intended recipient.",
   keepLink:
@@ -251,6 +252,8 @@ export const vi: Record<MessageKey, string> = {
   privateLink: "Liên kết riêng tư của bạn",
   keepReceipt: "Giữ phiếu thu hồi",
   receiptLink: "Phiếu thu hồi của người gửi",
+  noteReference: "Mã nhận diện ghi chú",
+  receiptUnreadUntil: "Hạn chờ đọc",
   receiptHelp:
     "Giữ liên kết này để thu hồi ghi chú sau. Hãy gửi liên kết đọc ở phía trên cho người nhận.",
   copyReceipt: "Sao chép phiếu thu hồi",
@@ -275,7 +278,6 @@ export const vi: Record<MessageKey, string> = {
   qrError: "Không lưu được ảnh QR. Hãy dùng Sao chép liên kết.",
   qrPrivacy: "Ảnh đã lưu chứa liên kết riêng tư và khóa. Hãy giữ ảnh an toàn.",
   expires: "Hết hạn",
-  expiresOnce: ", hoặc sau lần mở thành công đầu tiên.",
   protected: "Có mật khẩu bảo vệ",
   onceWarning: "Liên kết này chỉ mở được một lần. Chỉ gửi cho đúng người nhận.",
   keepLink:

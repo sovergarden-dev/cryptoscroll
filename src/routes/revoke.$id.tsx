@@ -2,6 +2,7 @@ import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Shell } from "@/components/Shell";
 import { NoteStatus } from "@/components/NoteStatus";
+import { ReceiptDetails } from "@/components/ReceiptDetails";
 import { RevokeNoteDialog, type RevocationOutcome } from "@/components/RevokeNoteDialog";
 import { deriveRevocationToken } from "@/lib/crypto";
 import { getNoteMetadata, revokeNote, type NoteMetadata } from "@/lib/notes";
@@ -89,13 +90,20 @@ function Receipt({ id }: { id: string }) {
         description={t("retiredHelp")}
       />
     );
+  const identity = {
+    id,
+    expiresAt: new Date(state.metadata.expiresAt),
+    burnAfterRead: state.metadata.burnAfterRead,
+  };
   return (
-    <section className="mx-auto w-full max-w-xl rounded-2xl border bg-card p-6 sm:p-10">
+    <section className="mx-auto w-full max-w-xl space-y-5 rounded-2xl border bg-card p-6 sm:p-10">
       <h1 ref={title} tabIndex={-1} className="text-2xl font-semibold">
         {t("receiptTitle")}
       </h1>
       <p className="my-5 text-sm text-muted-foreground">{t("receiptPurpose")}</p>
+      <ReceiptDetails {...identity} />
       <RevokeNoteDialog
+        identity={identity}
         hasPassphrase={state.metadata.hasPassphrase}
         onConfirm={(passphrase) =>
           revokeNote(id, state.secret, passphrase, "receipt", state.metadata)

@@ -4,6 +4,7 @@ import { ArrowLeft, Check, Copy, Download, Share2, LockKeyhole, TriangleAlert } 
 import { Button } from "./ui/button";
 import { revokeNote, type CreatedNote } from "@/lib/notes";
 import { SenderReceipt } from "./SenderReceipt";
+import { ReceiptDetails } from "./ReceiptDetails";
 import { RevokeNoteDialog, type RevocationOutcome } from "./RevokeNoteDialog";
 import { useI18n } from "@/lib/i18n";
 import type { MessageKey } from "@/lib/messages";
@@ -15,7 +16,7 @@ export function NoteSuccess({
   note: CreatedNote;
   onCreateAnother: () => void;
 }) {
-  const { t, formatDate } = useI18n();
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<MessageKey | null>(null);
   const [status, setStatus] = useState<MessageKey | null>(null);
@@ -93,6 +94,12 @@ export function NoteSuccess({
       </section>
     );
 
+  const target = new URL(note.revocationUrl ?? note.url);
+  const identity = {
+    id: target.pathname.split("/").at(-1)!,
+    expiresAt: note.expiresAt,
+    burnAfterRead: note.burnAfterRead,
+  };
   return (
     <section
       className="mx-auto w-full max-w-2xl rounded-2xl border bg-card p-6 shadow-glow sm:p-10"
@@ -171,11 +178,7 @@ export function NoteSuccess({
         <div className="space-y-3 text-sm text-muted-foreground">
           <p className="font-medium text-foreground">{t("qrHeading")}</p>
           <p>{t("qrHelp")}</p>
-          <p>
-            {t("expires")}{" "}
-            <time dateTime={note.expiresAt.toISOString()}>{formatDate(note.expiresAt)}</time>
-            {note.burnAfterRead ? t("expiresOnce") : "."}
-          </p>
+          <ReceiptDetails {...identity} />
           {note.hasPassphrase && (
             <p className="flex items-center gap-2 text-primary-glow">
               <LockKeyhole className="size-4" aria-hidden="true" /> {t("protected")}
@@ -197,12 +200,12 @@ export function NoteSuccess({
           <ArrowLeft aria-hidden="true" /> {t("createAnother")}
         </Button>
         <RevokeNoteDialog
+          identity={identity}
           hasPassphrase={note.hasPassphrase}
           onRetired={setRetired}
           onConfirm={(passphrase) => {
-            const target = new URL(note.revocationUrl ?? note.url);
             return revokeNote(
-              target.pathname.split("/").at(-1)!,
+              identity.id,
               target.hash.slice(1),
               passphrase,
               note.revocationUrl ? "receipt" : "read",

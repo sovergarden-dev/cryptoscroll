@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Trash2 } from "lucide-react";
 import type { revokeNote } from "@/lib/notes";
 import { Button } from "./ui/button";
+import { ReceiptDetails, type ReceiptIdentity } from "./ReceiptDetails";
 import { useI18n } from "@/lib/i18n";
 import type { Failure } from "../../shared/protocol";
 import {
@@ -19,10 +20,12 @@ export type RevocationOutcome = "revoked" | "unavailable";
 
 export function RevokeNoteDialog({
   hasPassphrase,
+  identity,
   onConfirm,
   onRetired,
 }: {
   hasPassphrase: boolean;
+  identity: ReceiptIdentity;
   onConfirm: (passphrase?: string) => ReturnType<typeof revokeNote>;
   onRetired: (outcome: RevocationOutcome) => void;
 }) {
@@ -71,6 +74,7 @@ export function RevokeNoteDialog({
             <AlertDialogTitle>{t("revokeTitle")}</AlertDialogTitle>
             <AlertDialogDescription>{t("revokeHelp")}</AlertDialogDescription>
           </AlertDialogHeader>
+          <ReceiptDetails {...identity} />
           {hasPassphrase && (
             <div>
               <label htmlFor="revoke-passphrase" className="block text-sm font-medium">
