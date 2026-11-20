@@ -1,8 +1,9 @@
 import { createContext, useContext } from "react";
 import { en, vi, type MessageKey } from "./messages";
 import type { ErrorCode, Failure } from "../../shared/protocol";
+import type { Language } from "./language";
 
-export type Language = "en" | "vi";
+export type { Language } from "./language";
 export const LanguageContext = createContext<{
   language: Language;
   setLanguage: (value: Language) => void;

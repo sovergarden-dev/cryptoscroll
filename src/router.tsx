@@ -3,6 +3,11 @@ import { createRouter } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
 import { routeTree } from "./routeTree.gen";
+import { preferredLanguage } from "./lib/language";
+
+const documentLanguage = createIsomorphicFn()
+  .server(() => preferredLanguage(getRequestHeader("accept-language") ?? ""))
+  .client(() => (document.documentElement.lang === "vi" ? ("vi" as const) : ("en" as const)));
 
 const documentNonce = createIsomorphicFn()
   .server(() => getRequestHeader("x-cryptoscroll-nonce"))
@@ -15,7 +20,7 @@ export const getRouter = () => {
 
   const router = createRouter({
     routeTree,
-    context: { queryClient },
+    context: { queryClient, initialLanguage: documentLanguage() },
     ssr: nonce ? { nonce } : {},
     scrollRestoration: true,
     // Lets Query own freshness; set caching defaults on the QueryClient, not the router.

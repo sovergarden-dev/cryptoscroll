@@ -10,7 +10,9 @@ CryptoScroll is a browser-encrypted dead drop for sensitive Markdown notes. Writ
 
 The review branch adds **Keep a revocation receipt** on the sender's sharing screen. Save this separate link to revoke later from another browser. The recipient's reading link and QR both exclude the receipt. A protected note still requires its original passphrase to revoke. [Review scope and rollout](docs/research/sender-revocation-receipt.md)
 
-On a small screen, **Write a note** moves focus to the editor. Once a recipient has opened a note, **Show original text** reveals its literal characters and line breaks. **Copy original text** sends the decrypted string to the device clipboard on request. Clearing the screen leaves clipboard contents under the device's control.
+On a small screen, **Write a note** moves focus to the editor. The editor keeps the full input and shows how many UTF-8 bytes to remove if it exceeds 32 KiB. **Show original text** preserves the recipient’s literal characters and line breaks. If automatic copy is unavailable, the reader selects the complete original for the device’s Copy command. Clearing the screen leaves clipboard contents under the device’s control.
+
+The first visit follows the device’s supported language preference. A choice in the header takes precedence during navigation. While the recipient waits, reaching the deadline or returning to the tab refreshes metadata. Reading still requires an explicit action.
 
 1. Write up to 32 KiB of UTF-8 text. Markdown headings, lists, links, blockquotes and code blocks work.
 2. Choose **After first read**, **1h**, **24h**, **72h**, **7d** or **30d**. One-time mode has a separate unread deadline: 1h to 30d, defaulting to 24h for new UI creations. Existing links retain their stored deadlines.

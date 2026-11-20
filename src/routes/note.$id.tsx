@@ -27,10 +27,33 @@ export const Route = createFileRoute("/note/$id")({
 
 type State =
   | { kind: "loading" }
-  | { kind: "ready"; metadata: NoteMetadata; encodedKey: string }
+  | {
+      kind: "ready";
+      metadata: NoteMetadata;
+      encodedKey: string;
+      recheckAt: number;
+      checking: boolean;
+    }
   | { kind: "open"; note: NoteData }
   | { kind: "failed"; error: Failure }
   | { kind: "cleared"; burned: boolean };
+
+function readyState(
+  encodedKey: string,
+  metadata: NoteMetadata,
+  serverTime?: number,
+): Extract<State, { kind: "ready" }> {
+  const remaining = Date.parse(metadata.expiresAt) - (serverTime ?? Date.now());
+  // Older hosts can omit Date. An active response then wins over an ahead-of-server clock.
+  const delay = remaining > 0 ? remaining : serverTime === undefined ? 30_000 : 1_000;
+  return {
+    kind: "ready",
+    encodedKey,
+    metadata,
+    recheckAt: performance.now() + delay,
+    checking: false,
+  };
+}
 
 function NotePage() {
   const { t, errorText, formatDate } = useI18n();
@@ -41,7 +64,8 @@ function NotePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Failure | null>(null);
   const [retry, setRetry] = useState(0);
-  const generation = useRef(0);
+  const generation = useRef<symbol | null>(null);
+  const checkAvailability = useRef<{ run: () => void; pending: boolean } | null>(null);
   const readyHeading = useRef<HTMLHeadingElement>(null);
   const errorMessage = useRef<HTMLParagraphElement>(null);
   useEffect(() => {
@@ -52,7 +76,8 @@ function NotePage() {
   }, [error]);
 
   useEffect(() => {
-    const current = ++generation.current;
+    const current = Symbol();
+    generation.current = current;
     const controller = new AbortController();
     setState({ kind: "loading" });
     setPassphrase("");
@@ -69,7 +94,7 @@ function NotePage() {
       try {
         await base64ToKey(encodedKey);
         if (!controller.signal.aborted && current === generation.current)
-          setState({ kind: "ready", metadata: result.data, encodedKey });
+          setState(readyState(encodedKey, result.data, result.serverTime));
       } catch {
         if (!controller.signal.aborted)
           setState({
@@ -84,14 +109,69 @@ function NotePage() {
     })();
     return () => {
       controller.abort();
-      generation.current = current + 1;
+      generation.current = null;
     };
   }, [id, hash, retry]);
 
+  const waitingMetadata = state.kind === "ready" ? state.metadata : null;
+  const recheckAt = state.kind === "ready" ? state.recheckAt : null;
+  useEffect(() => {
+    if (!waitingMetadata || recheckAt === null || busy) return;
+    const current = generation.current;
+    const controller = new AbortController();
+    const check = { run: refresh, pending: false };
+    async function refresh() {
+      if (check.pending || controller.signal.aborted || generation.current !== current) return;
+      check.pending = true;
+      setState((previous) =>
+        previous.kind === "ready" ? { ...previous, checking: true } : previous,
+      );
+      const result = await getNoteMetadata(id, controller.signal);
+      if (controller.signal.aborted || generation.current !== current) return;
+      if (!result.ok) {
+        setPassphrase("");
+        setError(null);
+        setState({ kind: "failed", error: result.error });
+      } else {
+        setState((previous) =>
+          previous.kind === "ready"
+            ? readyState(previous.encodedKey, result.data, result.serverTime)
+            : previous,
+        );
+      }
+    }
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    const onRestore = (event: PageTransitionEvent) => {
+      if (event.persisted) onVisible();
+    };
+    const timer = window.setTimeout(
+      refresh,
+      Math.min(2_147_483_647, Math.max(0, recheckAt - performance.now())),
+    );
+    checkAvailability.current = check;
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pageshow", onRestore);
+    return () => {
+      checkAvailability.current = null;
+      controller.abort();
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pageshow", onRestore);
+    };
+  }, [waitingMetadata, recheckAt, busy, id, hash]);
+
   async function reveal(event: FormEvent) {
     event.preventDefault();
-    if (state.kind !== "ready" || busy) return;
-    const current = generation.current;
+    if (state.kind !== "ready" || state.checking || checkAvailability.current?.pending || busy)
+      return;
+    if (performance.now() >= state.recheckAt) {
+      checkAvailability.current?.run();
+      return;
+    }
+    const current = Symbol();
+    generation.current = current;
     setBusy(true);
     setError(null);
     const result = await readNote(
@@ -225,15 +305,21 @@ function NotePage() {
           <Button
             type="submit"
             className="mt-7 h-12 w-full"
-            disabled={busy || (state.metadata.hasPassphrase && !passphrase)}
-            aria-busy={busy}
+            disabled={busy || state.checking || (state.metadata.hasPassphrase && !passphrase)}
+            aria-busy={busy || state.checking}
           >
             {state.metadata.burnAfterRead ? (
               <Flame aria-hidden="true" />
             ) : (
               <LockKeyhole aria-hidden="true" />
             )}
-            {busy ? t("opening") : state.metadata.burnAfterRead ? t("readDestroy") : t("readNote")}
+            {busy
+              ? t("opening")
+              : state.checking
+                ? t("checking")
+                : state.metadata.burnAfterRead
+                  ? t("readDestroy")
+                  : t("readNote")}
           </Button>
           <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
             {state.metadata.burnAfterRead ? t("deliveryWarning") : t("readPrivacy")}
