@@ -119,5 +119,5 @@ export type ErrorCode =
   | "NETWORK"
   | "DECRYPT_FAILED"
   | "CRYPTO_UNAVAILABLE";
-export type Failure = { code: ErrorCode; message: string };
+export type Failure = { code: ErrorCode; message: string; retryAt?: number };
 export type Result<T> = { ok: true; data: T } | { ok: false; error: Failure };

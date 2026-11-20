@@ -17,6 +17,8 @@ The target experience is a small, dark, accessible tool for people handing a tem
 - As a user, I want no account and no saved drafts so that the application does not maintain an identity or plaintext note history.
 - As a sender, I want visible network failures so that I do not share a link before the encrypted note has been stored.
 - As a sender, I want an explicit retry of the same creation after a lost acknowledgement, without creating duplicates or persisting my key.
+- An idle browser drops the pending envelope and link key at its recovery deadline. A request already in progress may finish and return its result. Creation and retry controls in the same tab observe the service's `Retry-After` deadline, including after discarding the pending attempt.
+- The reader can display and explicitly copy the original decrypted string. Switching presentation, copying or recovering from a clipboard failure uses the in-memory note and makes no further payload request.
 - As a sender, I want to choose how long a one-time note waits unread, independently of its one-time access policy.
 - As a user, I want English/Vietnamese labels, accessible focus transitions, native sharing where supported and a locally saved QR image.
 

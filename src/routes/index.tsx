@@ -48,7 +48,8 @@ function Home() {
   const [usePassphrase, setUsePassphrase] = useState(false);
   const [passphrase, setPassphrase] = useState("");
   const [created, setCreated] = useState<CreatedNote | null>(null);
-  const [pending, setPending] = useState<PendingCreation | null>(null);
+  const [pending, setPending] = useState<PendingCreation | "expired" | null>(null);
+  const [retryAt, setRetryAt] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<Failure | null>(null);
@@ -65,7 +66,42 @@ function Home() {
     content.trim().length > 0 &&
     bytes <= MAX_NOTE_BYTES &&
     (!usePassphrase || passphrase.trim().length > 0) &&
-    !disabled;
+    !disabled &&
+    retryAt === null;
+  const pendingDeadline = pending && pending !== "expired" ? pending.retryUntil : null;
+  const cooldownText =
+    retryAt === null
+      ? null
+      : t("retryAfter", { time: new Date(retryAt).toLocaleTimeString(locale) });
+
+  useEffect(() => {
+    if (busy || pendingDeadline === null) return;
+    const expire = () =>
+      setPending((current) =>
+        current && current !== "expired" && current.retryUntil === pendingDeadline
+          ? "expired"
+          : current,
+      );
+    const timer = window.setTimeout(expire, Math.max(0, pendingDeadline - Date.now()));
+    return () => window.clearTimeout(timer);
+  }, [pendingDeadline, busy]);
+
+  useEffect(() => {
+    if (retryAt === null) return;
+    const deadline = retryAt;
+    let timer: number;
+    function refresh() {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) {
+        setRetryAt(null);
+        setError((previous) => (previous?.code === "RATE_LIMITED" ? null : previous));
+      } else {
+        timer = window.setTimeout(refresh, Math.min(remaining, 2_147_483_647));
+      }
+    }
+    refresh();
+    return () => window.clearTimeout(timer);
+  }, [retryAt]);
 
   useEffect(() => {
     setReady(true);
@@ -134,6 +170,13 @@ function Home() {
     if (current !== generation.current) return;
     setBusy(false);
     if (!result.ok) {
+      if (result.error.code === "RATE_LIMITED")
+        setRetryAt(result.error.retryAt ?? Date.now() + 60_000);
+      if (result.error.code === "CREATION_EXPIRED" || Date.now() >= prepared.retryUntil) {
+        setPending("expired");
+        setError(null);
+        return;
+      }
       setError(result.error);
       return;
     }
@@ -171,11 +214,13 @@ function Home() {
         <NoteSuccess note={created} onCreateAnother={startOver} />
       ) : pending ? (
         <PendingNoteCreation
-          pending={pending}
+          retryUntil={pendingDeadline}
+          cooldownText={cooldownText}
           busy={busy}
           error={error}
           onRetry={() => {
-            if (!busy) void submitPending(pending, generation.current);
+            if (pending !== "expired" && !busy && retryAt === null)
+              void submitPending(pending, generation.current);
           }}
           onDiscard={startOver}
         />
@@ -195,6 +240,15 @@ function Home() {
               <br />
               <span className="text-primary-glow">{t("vanish")}</span>
             </h1>
+            <Button
+              type="button"
+              className="mt-5 min-h-11 lg:hidden"
+              disabled={disabled}
+              onClick={() => editor.current?.focus()}
+              aria-controls="note-content"
+            >
+              {t("writeNow")} <ArrowRight aria-hidden="true" />
+            </Button>
             <p className="mt-6 max-w-sm leading-relaxed text-muted-foreground">{t("intro")}</p>
             <div className="mt-7 flex items-center gap-2 text-sm">
               <ShieldCheck className="size-4 text-success" aria-hidden="true" />
@@ -367,6 +421,11 @@ function Home() {
                   className="mt-5 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-danger-text"
                 >
                   {errorText(error)}
+                </p>
+              )}
+              {cooldownText && (
+                <p role="status" className="mt-4 text-sm text-muted-foreground">
+                  {cooldownText}
                 </p>
               )}
               <Button

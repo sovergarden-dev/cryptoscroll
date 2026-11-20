@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { consumeNote, getNoteCount } from "./note-api";
+import { createNote } from "./notes";
 
 beforeEach(() => {
   vi.stubGlobal("window", { location: { origin: "http://localhost:5173" } });
@@ -103,4 +104,35 @@ it("bounds a stalled destructive read without retrying or claiming it preserved 
   });
   expect(transport).toHaveBeenCalledTimes(1);
   expect(vi.getTimerCount()).toBe(0);
+});
+
+it.each([
+  ["7", 7000],
+  ["0", 0],
+  ["Thu, 01 Jan 2026 00:00:12 GMT", 12000],
+  ["invalid", 60000],
+  [null, 60000],
+] as const)("honors the creation cooldown for Retry-After %s", async (header, delay) => {
+  const now = Date.UTC(2026, 0, 1);
+  vi.spyOn(Date, "now").mockReturnValue(now);
+  vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response("Rate limited", {
+      status: 429,
+      headers: header === null ? {} : { "Retry-After": header },
+    }),
+  );
+  await expect(createNote({ content: "cooldown fixture", expiry: "1h" })).resolves.toMatchObject({
+    ok: false,
+    error: { code: "RATE_LIMITED", retryAt: now + delay },
+  });
+});
+
+it("reports a timed read network error without suggesting the note was consumed", async () => {
+  vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("offline"));
+  const result = await consumeNote("a".repeat(32), { readToken: btoa("x".repeat(32)) }, false);
+  expect(result.ok).toBe(false);
+  if (!result.ok) {
+    expect(result.error.code).toBe("NETWORK");
+    expect(result.error.message).not.toContain("consumed");
+  }
 });

@@ -31,10 +31,22 @@ const ErrorSchema = z.object({
   }),
 });
 
+function creationRetryAt(header: string | null): number {
+  const now = Date.now();
+  const value = header?.trim() ?? "";
+  const deadline = /^\d+$/.test(value)
+    ? now + Number(value) * 1000
+    : /^[a-z]{3,9}[, ]/i.test(value)
+      ? Date.parse(value)
+      : NaN;
+  return Number.isFinite(new Date(deadline).getTime()) ? Math.max(now, deadline) : now + 60_000;
+}
+
 async function request<T>(
   path: string,
   schema: z.ZodType<T>,
   init: RequestInit = {},
+  oneTimeRead = false,
 ): Promise<Result<T>> {
   const controller = new AbortController();
   const parentSignal = init.signal;
@@ -58,6 +70,17 @@ async function request<T>(
         redirect: "error",
       },
     );
+    if (response.status === 429 && path === "/notes" && init.method === "POST") {
+      await response.body?.cancel();
+      return {
+        ok: false,
+        error: {
+          code: "RATE_LIMITED",
+          message: "Too many creation attempts.",
+          retryAt: creationRetryAt(response.headers.get("Retry-After")),
+        },
+      };
+    }
     const body: unknown = await response.json();
     if (!response.ok) {
       const parsed = ErrorSchema.safeParse(body);
@@ -87,7 +110,7 @@ async function request<T>(
           (timedOut
             ? "The note service took too long to respond. Check your connection."
             : "Could not reach the note service. Check your connection.") +
-          (path.endsWith("/read") ? " This read may already have consumed a one-time note." : "") +
+          (oneTimeRead ? " This read may already have consumed a one-time note." : "") +
           (init.method === "DELETE"
             ? " Revocation may already have succeeded; its result could not be confirmed."
             : ""),
@@ -113,12 +136,17 @@ export function getNoteMetadata(id: string, signal?: AbortSignal) {
   });
 }
 
-export function consumeNote(id: string, proof: ReadNoteRequest) {
-  return request(`/notes/${encodeURIComponent(id)}/read`, NoteContentSchema, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(proof),
-  });
+export function consumeNote(id: string, proof: ReadNoteRequest, oneTimeRead = true) {
+  return request(
+    `/notes/${encodeURIComponent(id)}/read`,
+    NoteContentSchema,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(proof),
+    },
+    oneTimeRead,
+  );
 }
 
 export function getNoteCount(signal?: AbortSignal) {

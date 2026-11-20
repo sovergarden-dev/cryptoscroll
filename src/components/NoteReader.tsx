@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { EyeOff, Flame, Clock } from "lucide-react";
 import { Button } from "./ui/button";
@@ -15,6 +15,19 @@ export function NoteReader({
   onExpire: () => void;
 }) {
   const { t, formatDate } = useI18n();
+  const [original, setOriginal] = useState(false);
+  const [copyResult, setCopyResult] = useState<"originalCopied" | "originalCopyFailed" | null>(
+    null,
+  );
+  async function copyOriginal() {
+    try {
+      await navigator.clipboard.writeText(note.content);
+      setCopyResult("originalCopied");
+    } catch {
+      setOriginal(true);
+      setCopyResult("originalCopyFailed");
+    }
+  }
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     heading.current?.focus();
@@ -61,36 +74,61 @@ export function NoteReader({
           </p>
         </div>
       </div>
+      <div className="mb-3 flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          aria-pressed={original}
+          aria-controls="decrypted-content"
+          onClick={() => {
+            setOriginal(!original);
+            setCopyResult(null);
+          }}
+        >
+          {t("viewOriginal")}
+        </Button>
+        <Button type="button" variant="outline" onClick={copyOriginal}>
+          {t("copyOriginal")}
+        </Button>
+      </div>
+      <p role="status" className="text-sm text-muted-foreground">
+        {copyResult && t(copyResult)}
+      </p>
       <article
+        id="decrypted-content"
         aria-label={t("decryptedNote")}
         className="prose-note min-w-0 rounded-2xl border bg-card p-6 sm:p-10"
       >
-        <ReactMarkdown
-          skipHtml
-          components={{
-            img: ({ alt }) => (
-              <span className="text-muted-foreground">
-                [{t("imageOmitted")}
-                {alt ? `: ${alt}` : ""}]
-              </span>
-            ),
-            a: ({ href, children }) =>
-              href && /^https?:\/\//i.test(href) ? (
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  referrerPolicy="no-referrer"
-                >
-                  {children}
-                </a>
-              ) : (
-                <span>{children}</span>
+        {original ? (
+          <div className="whitespace-pre-wrap font-mono text-sm">{note.content}</div>
+        ) : (
+          <ReactMarkdown
+            skipHtml
+            components={{
+              img: ({ alt }) => (
+                <span className="text-muted-foreground">
+                  [{t("imageOmitted")}
+                  {alt ? `: ${alt}` : ""}]
+                </span>
               ),
-          }}
-        >
-          {note.content}
-        </ReactMarkdown>
+              a: ({ href, children }) =>
+                href && /^https?:\/\//i.test(href) ? (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    referrerPolicy="no-referrer"
+                  >
+                    {children}
+                  </a>
+                ) : (
+                  <span>{children}</span>
+                ),
+            }}
+          >
+            {note.content}
+          </ReactMarkdown>
+        )}
       </article>
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
         <p className="text-xs text-muted-foreground">{t("readerPrivacy")}</p>

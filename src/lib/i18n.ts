@@ -50,13 +50,13 @@ export function useI18n() {
       String(values[name] ?? match),
     );
   }
-  function errorText(error: Failure, operation?: "read" | "revoke") {
+  function errorText(error: Failure, operation?: "one-time-read" | "revoke") {
     if (operation === "revoke" && error.code === "WRONG_PASSPHRASE") return t("wrongRevoke");
     const uncertain = error.code === "NETWORK" || error.code === "UNAVAILABLE";
     return (
       t(errorKeys[error.code]) +
       (uncertain && operation
-        ? ` ${t(operation === "read" ? "uncertainRead" : "uncertainRevoke")}`
+        ? ` ${t(operation === "one-time-read" ? "uncertainRead" : "uncertainRevoke")}`
         : "")
     );
   }

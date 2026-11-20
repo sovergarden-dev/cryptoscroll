@@ -4,6 +4,7 @@
 
 ### Added
 
+- Original-text viewing and copy preserve Markdown delimiters and line breaks. A mobile shortcut focuses the editor.
 - Configurable unread deadlines for one-time notes, with a 24-hour default for new UI creations and unchanged existing links.
 - Bounded, explicit creation recovery using a timestamped independent nonce, a per-note durable pending record and an in-memory encrypted browser request; consumed/expired notes cannot be recreated by a retry.
 - English/Vietnamese note flows, native mobile sharing with cancellation/fallback handling, and local PNG QR export.
@@ -24,6 +25,7 @@
 
 ### Fixed
 
+- Distinguish timed and one-time read errors, mark incorrect passphrases separately, honor creation cooldowns after discard, and release expired pending secrets once in-flight creation finishes.
 - Enable the language selector once the page is interactive so an early choice of Vietnamese survives startup.
 - Pin the frontend runtime compatibility date to November 14, 2026 so rebuilding on a later day still works with the locked Worker runtime.
 - Pin Playwright to the last working 1.64.1 release for the upstream Firefox ARIA-reflection regression; retain native application labels and restore Firefox accessibility audits on every platform.

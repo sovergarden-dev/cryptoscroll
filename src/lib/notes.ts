@@ -145,7 +145,7 @@ export async function prepareNoteCreation(
 }
 
 export async function submitNoteCreation(pending: PendingCreation): Promise<Result<CreatedNote>> {
-  if (Date.now() > pending.retryUntil)
+  if (Date.now() >= pending.retryUntil)
     return {
       ok: false,
       error: { code: "CREATION_EXPIRED", message: "The creation recovery window has ended." },
@@ -168,7 +168,12 @@ export async function createNote(options: CreationOptions): Promise<Result<Creat
   return prepared.ok ? submitNoteCreation(prepared.data) : prepared;
 }
 
-type NoteAccess = { primaryKey: CryptoKey; proof: ReadNoteRequest; passphraseKey?: CryptoKey };
+type NoteAccess = {
+  primaryKey: CryptoKey;
+  proof: ReadNoteRequest;
+  burnAfterRead: boolean;
+  passphraseKey?: CryptoKey;
+};
 
 async function prepareNoteAccess(
   id: string,
@@ -225,6 +230,7 @@ async function prepareNoteAccess(
     ok: true,
     data: {
       primaryKey,
+      burnAfterRead: info.data.burnAfterRead,
       proof: { readToken, ...(protection && { passphraseVerifier: protection.verifier }) },
       ...(protection && { passphraseKey: protection.key }),
     },
@@ -246,7 +252,7 @@ export async function readNote(
   const access = await prepareNoteAccess(id, encodedKey, passphrase, knownMetadata);
   if (!access.ok) return access;
   const { primaryKey, passphraseKey, proof } = access.data;
-  const result = await consumeNote(id, proof);
+  const result = await consumeNote(id, proof, access.data.burnAfterRead);
   if (!result.ok) return result;
   try {
     let encrypted = { ciphertext: result.data.ciphertext, iv: result.data.iv };

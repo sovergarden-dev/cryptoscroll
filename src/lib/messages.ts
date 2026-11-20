@@ -20,6 +20,7 @@ export const en = {
   countLoading: "Loading note count…",
   refreshCount: "Refresh note count",
   createForm: "Create an encrypted note",
+  writeNow: "Write a note",
   secretLabel: "Your secret note",
   markdown: "Markdown supported",
   placeholder: "# For your eyes only\n\nWrite something worth keeping secret…",
@@ -54,6 +55,8 @@ export const en = {
   pendingLifetime:
     "Recovery is available in this tab until {time}. Reloading or leaving loses the key and recovery attempt.",
   retryCreation: "Retry this creation",
+  retryAfter: "You can try again at {time}.",
+  recoveryEndedTitle: "The creation recovery window has ended.",
   retryingCreation: "Confirming creation…",
   discardCreation: "Discard this attempt",
   discardHelp:
@@ -132,6 +135,10 @@ export const en = {
   imageOmitted: "Image omitted",
   readerPrivacy: "Decrypted here, in your browser. Images are not loaded.",
   clearScreen: "Clear this screen",
+  viewOriginal: "Show original text",
+  copyOriginal: "Copy original text",
+  originalCopied: "Original text copied to the clipboard.",
+  originalCopyFailed: "Clipboard access is unavailable. Select the original text below to copy it.",
   tryAgain: "Try again",
   writeNew: "Write a new note",
   notFoundTitle: "These are not the scrolls you're looking for.",
@@ -147,7 +154,7 @@ export const en = {
   errorWrongPassphrase: "Wrong passphrase. The note has not been opened.",
   errorInvalidRequest: "Check the note length, passphrase and expiry, then try again.",
   errorTooLarge: "The encrypted note is too large. Shorten the note and try again.",
-  errorRateLimited: "Too many creation attempts. Wait one minute, then retry.",
+  errorRateLimited: "Too many creation attempts.",
   errorUnavailable: "The note service is temporarily unavailable. Try again later.",
   errorNetwork: "Could not reach the note service. Check your connection and try again.",
   errorDecrypt:
@@ -183,6 +190,7 @@ export const vi: Record<MessageKey, string> = {
   countLoading: "Đang tải số ghi chú…",
   refreshCount: "Cập nhật số ghi chú",
   createForm: "Tạo ghi chú mã hóa",
+  writeNow: "Viết ghi chú",
   secretLabel: "Ghi chú bí mật của bạn",
   markdown: "Hỗ trợ Markdown",
   placeholder: "# Chỉ dành cho người nhận\n\nViết điều bạn muốn giữ bí mật…",
@@ -218,6 +226,8 @@ export const vi: Record<MessageKey, string> = {
   pendingLifetime:
     "Có thể khôi phục trong tab này đến {time}. Tải lại hoặc rời trang sẽ làm mất khóa và lần tạo đang chờ.",
   retryCreation: "Thử lại lần tạo này",
+  retryAfter: "Bạn có thể thử lại lúc {time}.",
+  recoveryEndedTitle: "Đã hết thời gian khôi phục lần tạo.",
   retryingCreation: "Đang xác nhận lần tạo…",
   discardCreation: "Bỏ lần tạo này",
   discardHelp:
@@ -293,6 +303,10 @@ export const vi: Record<MessageKey, string> = {
   imageOmitted: "Đã ẩn hình ảnh",
   readerPrivacy: "Giải mã ngay trong trình duyệt của bạn. Hình ảnh không được tải.",
   clearScreen: "Xóa nội dung trên màn hình",
+  viewOriginal: "Xem nguyên văn",
+  copyOriginal: "Sao chép nguyên văn",
+  originalCopied: "Đã sao chép nguyên văn vào bộ nhớ tạm.",
+  originalCopyFailed: "Không truy cập được bộ nhớ tạm. Hãy chọn văn bản bên dưới để sao chép.",
   tryAgain: "Thử lại",
   writeNew: "Viết ghi chú mới",
   notFoundTitle: "Không tìm thấy trang bạn cần.",
@@ -309,7 +323,7 @@ export const vi: Record<MessageKey, string> = {
   errorWrongPassphrase: "Sai mật khẩu. Ghi chú chưa được mở.",
   errorInvalidRequest: "Kiểm tra độ dài ghi chú, mật khẩu và thời hạn, rồi thử lại.",
   errorTooLarge: "Ghi chú mã hóa quá lớn. Hãy rút ngắn nội dung rồi thử lại.",
-  errorRateLimited: "Có quá nhiều lần tạo. Đợi một phút rồi thử lại.",
+  errorRateLimited: "Có quá nhiều lần tạo ghi chú.",
   errorUnavailable: "Dịch vụ ghi chú tạm thời không khả dụng. Hãy thử lại sau.",
   errorNetwork: "Không kết nối được dịch vụ ghi chú. Kiểm tra kết nối rồi thử lại.",
   errorDecrypt:
