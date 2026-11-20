@@ -19,6 +19,8 @@ The target experience is a small, dark, accessible tool for people handing a tem
 - As a sender, I want an explicit retry of the same creation after a lost acknowledgement, without creating duplicates or persisting my key.
 - An idle browser drops the pending envelope and link key at its recovery deadline. A request already in progress may finish and return its result. Creation and retry controls in the same tab observe the service's `Retry-After` deadline, including after discarding the pending attempt.
 - The reader can display and explicitly copy the original decrypted string. Switching presentation, copying or recovering from a clipboard failure uses the in-memory note and makes no further payload request.
+- Keep all text entered in the editor. An over-limit UTF-8 value shows its excess byte count and blocks creation until corrected. If clipboard access is denied, focus and select the entire read-only original for manual copying.
+- The initial language follows the supported language preferences of the request and browser. A manual choice takes precedence for the current document. A waiting recipient rechecks metadata at the server deadline and on return to the tab. Only an explicit read can request the payload.
 - As a sender, I want to choose how long a one-time note waits unread, independently of its one-time access policy.
 - As a user, I want English/Vietnamese labels, accessible focus transitions, native sharing where supported and a locally saved QR image.
 

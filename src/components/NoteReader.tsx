@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import { EyeOff, Flame, Clock } from "lucide-react";
 import { Button } from "./ui/button";
@@ -16,6 +17,7 @@ export function NoteReader({
 }) {
   const { t, formatDate } = useI18n();
   const [original, setOriginal] = useState(false);
+  const originalText = useRef<HTMLTextAreaElement>(null);
   const [copyResult, setCopyResult] = useState<"originalCopied" | "originalCopyFailed" | null>(
     null,
   );
@@ -24,8 +26,15 @@ export function NoteReader({
       await navigator.clipboard.writeText(note.content);
       setCopyResult("originalCopied");
     } catch {
-      setOriginal(true);
-      setCopyResult("originalCopyFailed");
+      flushSync(() => {
+        setOriginal(true);
+        setCopyResult("originalCopyFailed");
+      });
+      const field = originalText.current;
+      if (field) {
+        field.focus();
+        field.select();
+      }
     }
   }
   const heading = useRef<HTMLHeadingElement>(null);
@@ -35,7 +44,10 @@ export function NoteReader({
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     function checkExpiry() {
-      const remaining = note.expiresAt.getTime() - Date.now();
+      const remaining =
+        note.displayDeadline === undefined
+          ? note.expiresAt.getTime() - Date.now()
+          : note.displayDeadline - performance.now();
       if (remaining <= 0) onExpire();
       else timer = setTimeout(checkExpiry, Math.min(remaining, 60_000));
     }
@@ -100,7 +112,24 @@ export function NoteReader({
         className="prose-note min-w-0 rounded-2xl border bg-card p-6 sm:p-10"
       >
         {original ? (
-          <div className="whitespace-pre-wrap font-mono text-sm">{note.content}</div>
+          <textarea
+            ref={originalText}
+            readOnly
+            spellCheck={false}
+            autoComplete="off"
+            aria-label={t("originalText")}
+            rows={Math.min(18, Math.max(4, note.content.split("\n").length))}
+            value={note.content}
+            onCopy={(event) => {
+              const field = event.currentTarget;
+              if (field.selectionStart === 0 && field.selectionEnd === field.value.length) {
+                // Textareas normalize line endings. Copy the decrypted string for a full selection.
+                event.clipboardData.setData("text/plain", note.content);
+                event.preventDefault();
+              }
+            }}
+            className="w-full resize-y whitespace-pre-wrap rounded-sm bg-transparent font-mono text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+          />
         ) : (
           <ReactMarkdown
             skipHtml

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { ArrowRight, ChevronDown, Flame, LockKeyhole, RefreshCw, ShieldCheck } from "lucide-react";
 import { Shell } from "@/components/Shell";
 import { NoteSuccess } from "@/components/NoteSuccess";
@@ -60,7 +60,8 @@ function Home() {
   const [editorVersion, setEditorVersion] = useState(0);
   const editor = useRef<HTMLTextAreaElement>(null);
   const generation = useRef(0);
-  const bytes = new TextEncoder().encode(content).length;
+  const bytes = useMemo(() => new TextEncoder().encode(content).length, [content]);
+  const excessBytes = Math.max(0, bytes - MAX_NOTE_BYTES);
   const disabled = !ready || busy;
   const canCreate =
     content.trim().length > 0 &&
@@ -307,13 +308,12 @@ function Home() {
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
                 rows={10}
-                maxLength={MAX_NOTE_BYTES}
                 spellCheck={false}
                 autoComplete="off"
                 disabled={disabled}
                 placeholder={t("placeholder")}
-                aria-describedby="note-size"
-                aria-invalid={bytes > MAX_NOTE_BYTES}
+                aria-describedby={excessBytes ? "note-size note-size-error" : "note-size"}
+                aria-invalid={excessBytes > 0}
                 className="w-full resize-y rounded-lg border border-transparent bg-background/50 p-4 font-mono text-sm leading-relaxed placeholder:text-muted-foreground focus:border-primary"
               />
               <p
@@ -322,6 +322,20 @@ function Home() {
               >
                 {bytes.toLocaleString(locale)} / {MAX_NOTE_BYTES.toLocaleString(locale)}{" "}
                 {t("bytes")}
+              </p>
+              <p
+                id="note-size-error"
+                aria-live="polite"
+                className="text-right text-sm text-danger-text"
+              >
+                {excessBytes > 0 &&
+                  t("shortenNote", {
+                    amount: new Intl.NumberFormat(locale, {
+                      style: "unit",
+                      unit: "byte",
+                      unitDisplay: "long",
+                    }).format(excessBytes),
+                  })}
               </p>
               <fieldset disabled={disabled} className="mt-6">
                 <legend className="mb-3 flex items-center gap-2 text-sm font-medium">

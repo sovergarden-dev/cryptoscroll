@@ -36,6 +36,7 @@ export interface CreatedNote {
 
 export interface NoteData extends Omit<CreatedNote, "url"> {
   content: string;
+  displayDeadline?: number;
 }
 
 export interface PendingCreation {
@@ -254,6 +255,9 @@ export async function readNote(
   const { primaryKey, passphraseKey, proof } = access.data;
   const result = await consumeNote(id, proof, access.data.burnAfterRead);
   if (!result.ok) return result;
+  const expiresAt = new Date(result.data.expiresAt);
+  const displayDeadline =
+    performance.now() + expiresAt.getTime() - (result.serverTime ?? Date.now());
   try {
     let encrypted = { ciphertext: result.data.ciphertext, iv: result.data.iv };
     if (passphraseKey)
@@ -265,7 +269,8 @@ export async function readNote(
       ok: true,
       data: {
         content,
-        expiresAt: new Date(result.data.expiresAt),
+        expiresAt,
+        ...(!result.data.burnAfterRead && { displayDeadline }),
         burnAfterRead: result.data.burnAfterRead,
         hasPassphrase: result.data.hasPassphrase,
       },

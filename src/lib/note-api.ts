@@ -47,7 +47,7 @@ async function request<T>(
   schema: z.ZodType<T>,
   init: RequestInit = {},
   oneTimeRead = false,
-): Promise<Result<T>> {
+): Promise<Result<T> & { serverTime?: number }> {
   const controller = new AbortController();
   const parentSignal = init.signal;
   const abortFromParent = () => controller.abort(parentSignal?.reason);
@@ -95,8 +95,9 @@ async function request<T>(
           };
     }
     const parsed = schema.safeParse(body);
+    const serverTime = Date.parse(response.headers.get("Date") ?? "");
     return parsed.success
-      ? { ok: true, data: parsed.data }
+      ? { ok: true, data: parsed.data, ...(Number.isFinite(serverTime) && { serverTime }) }
       : {
           ok: false,
           error: { code: "UNAVAILABLE", message: "The note service returned an invalid response." },

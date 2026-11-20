@@ -338,9 +338,15 @@ describe("Cloudflare Worker with real KV and Durable Objects", () => {
   it("does not consume or expose ciphertext to metadata visits, HEAD requests or missing credentials", async () => {
     const { id, proof } = await create();
     for (let index = 0; index < 2; index++) {
-      const response = await runtime.dispatchFetch(`https://cryptoscroll.test/api/notes/${id}`);
+      const response = await runtime.dispatchFetch(`https://cryptoscroll.test/api/notes/${id}`, {
+        headers: { Origin: "http://localhost:5173" },
+      });
       expect(response.status).toBe(200);
       expect(response.headers.get("Cache-Control")).toBe("no-store");
+      expect(Number.isFinite(Date.parse(response.headers.get("Date") ?? ""))).toBe(true);
+      expect(response.headers.get("Access-Control-Expose-Headers")?.split(/,\s*/)).toContain(
+        "Date",
+      );
       const body = await response.json();
       expect(NoteMetadataSchema.safeParse(body).success).toBe(true);
       expect(body).not.toHaveProperty("ciphertext");
