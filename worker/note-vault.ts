@@ -158,6 +158,8 @@ export class NoteVault implements DurableObject {
     };
     await this.state.storage.put("note", retired);
     await this.state.storage.setAlarm(Date.now() + 1000);
+    // Keep retirement and its cleanup alarm durable if the following KV call throws.
+    await this.state.storage.sync();
     await this.finishCleanup(retired);
   }
 
@@ -182,7 +184,10 @@ export class NoteVault implements DurableObject {
         if (Date.parse(note.expiresAt) <= Date.now()) await this.retire(note, "expired");
         else await this.state.storage.setAlarm(Date.parse(note.expiresAt));
       } else {
-        if (!note.kvDeleted) await this.state.storage.setAlarm(Date.now() + 60_000);
+        if (!note.kvDeleted) {
+          await this.state.storage.setAlarm(Date.now() + 60_000);
+          await this.state.storage.sync();
+        }
         await this.finishCleanup(note);
       }
     });

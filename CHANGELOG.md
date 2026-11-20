@@ -43,5 +43,7 @@
 
 ### Security
 
+- Commit the retirement marker and its cleanup alarm to durable storage before deleting ciphertext from KV.
+- Open private vulnerability reporting on GitHub and document how to contact the maintainers.
 - Derive separate read capabilities; keep plaintext, passphrases and encryption keys out of API payloads and application persistence.
 - Bound and validate API bodies, restrict CORS, disable response caching, remove browser error telemetry and prevent automatic Markdown image loads.
