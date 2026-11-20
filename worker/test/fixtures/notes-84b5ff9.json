@@ -1,0 +1,47 @@
+{
+  "sourceCommit": "84b5ff958bb66d7c672bf3964c7379f15f05f4b2",
+  "cases": [
+    {
+      "name": "one-time-unicode",
+      "plaintext": "﻿# Mật thư thử nghiệm 🔐\n\n\t*QA-legacy*  \n",
+      "passphrase": null,
+      "fragment": "-Mp6DG9ReTF0iriI16GiIuqz4iJ_37kcuMPKWNzgYZw",
+      "state": {
+        "version": 1,
+        "expiresAt": "2026-12-20T11:38:12.333Z",
+        "burnAfterRead": true,
+        "hasPassphrase": false,
+        "readTokenHash": "j+HNQLtvm77o3eWme52gfh0DcQpLMvVqfqJzuTbQPJk=",
+        "kind": "active",
+        "id": "58b6fdff6d86af51a08b95d6b8015959",
+        "requestHash": "ce00cKY2cRe3D/eUubzA8xwiETrP0nnZl46Uyh1cPXA="
+      },
+      "payload": {
+        "ciphertext": "ZNrmYt8tU8x6OrvSs/AyRvY5+2e/xl/BIMI0Rb5GPp7QvSJ7RNO61K1eQGxwSPkizNN0IAqMgFnxnUEBgFWngIR6/Sw=",
+        "iv": "5dvPQbMs0mzmNanS"
+      }
+    },
+    {
+      "name": "timed-protected",
+      "plaintext": "  Giữ từng dấu: ế, ế, dấu * và tab\t\n",
+      "passphrase": "  Mật khẩu thử công khai 🔐  ",
+      "fragment": "uyrWXI-jNm0DS_3MYe-pStBZOaTMQLa4L4Rwzuem7_g",
+      "state": {
+        "version": 1,
+        "expiresAt": "2026-11-20T12:38:13.311Z",
+        "burnAfterRead": false,
+        "hasPassphrase": true,
+        "passphraseSalt": "XYilXH/fWIafWBNQCanvqg==",
+        "readTokenHash": "jX+wRwqn1Ja43tBuLzksRFb3f3wsy5RBg75sPoGQoKE=",
+        "passphraseVerifier": "GeOaqXbRYduzikXpxvrInQqjjzQnJacA561L+E4islE=",
+        "kind": "active",
+        "id": "4bf5ac5e0090dedd67e8966583c76a90",
+        "requestHash": "Y4lg8LJm7lp+A+PMQjubEDwqpjwA4v+4TholMLvibXo="
+      },
+      "payload": {
+        "ciphertext": "zUJwvLsDLPFvsIMJeiPXJPElTn0lyq2BzzTFCSHH1kWbNqjYK+pY5nacIpd1tvlY9jS6TX3AVRsKbyQh392h2OzK/I4iTpVmlCE4b/9y8P44+LOcKE6FaFfS6cNTY5wAISePrB8nSCaTqrPjVVE52OqkxYTv+XSNf4UJdnry9nPpmiLxsIa79GktTiqa2nx85oVaZFI=",
+        "iv": "yFki1NxqRH/1SFko"
+      }
+    }
+  ]
+}

@@ -64,12 +64,17 @@ describe("note creation boundaries", () => {
     });
     const success = await submitNoteCreation(prepared.data);
     expect(success.ok && success.data.url.endsWith(`#${prepared.data.encodedKey}`)).toBe(true);
+    expect(
+      success.ok && success.data.revocationUrl?.endsWith(`#${prepared.data.revocationSecret}`),
+    ).toBe(true);
+    expect(prepared.data.revocationSecret).not.toBe(prepared.data.encodedKey);
     expect(transport.mock.calls[0]![1]!.body).toBe(transport.mock.calls[1]![1]!.body);
     const body = String(transport.mock.calls[0]![1]!.body);
     for (const secret of [
       "private recovery fixture",
       "separate secret fixture",
       prepared.data.encodedKey,
+      prepared.data.revocationSecret,
     ])
       expect(body).not.toContain(secret);
     vi.spyOn(Date, "now").mockReturnValue(prepared.data.retryUntil + CREATION_RETRY_MS);

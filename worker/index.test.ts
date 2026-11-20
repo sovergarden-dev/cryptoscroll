@@ -1,5 +1,7 @@
 // @vitest-environment node
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import frozenNotes from "./test/fixtures/notes-84b5ff9.json";
+import { readNote as openFromBrowser } from "../src/lib/notes";
 import { createWorkerRuntime } from "./test/runtime";
 import { creationIdentity } from "./creation-recovery";
 import {
@@ -7,6 +9,8 @@ import {
   decryptNote,
   deriveKeyFromPassphrase,
   deriveReadToken,
+  deriveRevocationToken,
+  generateRevocationSecret,
   encryptNote,
   generateKey,
   keyToBase64,
@@ -102,6 +106,78 @@ afterAll(async () => {
 });
 
 describe("Cloudflare Worker with real KV and Durable Objects", () => {
+  it.each(frozenNotes.cases)("opens the original 84b5ff9 link for $name", async (fixture) => {
+    const id = fixture.state.id;
+    const expiresAt = new Date(Date.now() + 3600000).toISOString();
+    const kv = await runtime.getKVNamespace("NOTES_KV");
+    await kv.put(id, JSON.stringify(fixture.payload));
+    const vaults = await runtime.getDurableObjectNamespace("NOTE_VAULT");
+    // Only the wall-clock deadline moves. The original ID, encrypted bytes and authorization state stay frozen.
+    const restored = await vaults
+      .get(vaults.idFromName(id))
+      .fetch("https://fixture.invalid/frozen-v1-state", {
+        method: "PUT",
+        body: JSON.stringify({ ...fixture.state, expiresAt }),
+      });
+    expect(restored.status).toBe(204);
+    vi.stubGlobal("window", { location: { origin: (await runtime.ready).origin } });
+    try {
+      const open = () => openFromBrowser(id, fixture.fragment, fixture.passphrase ?? undefined);
+      const result = await open();
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error(result.error.code);
+      expect(result.data.content).toBe(fixture.plaintext);
+      expect(result.data.burnAfterRead).toBe(fixture.state.burnAfterRead);
+      const second = await open();
+      if (fixture.state.burnAfterRead)
+        expect(second).toMatchObject({ ok: false, error: { code: "DESTROYED" } });
+      else expect(second).toMatchObject({ ok: true, data: { content: fixture.plaintext } });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it.each(["read first", "revoke first", "simultaneous"] as const)(
+    "serializes a protected one-time read and sender revocation: %s",
+    async (order) => {
+      const fixture = await envelope(true, "disposable race fixture");
+      const revokeToken = await deriveRevocationToken(generateRevocationSecret());
+      const creation = await submit({
+        ...fixture.body,
+        revokeTokenHash: await hashProof(revokeToken),
+      });
+      expect(creation.status).toBe(201);
+      const { id } = CreatedNoteSchema.parse(await creation.json());
+      const open = () => read(id, fixture.proof);
+      const revoke = () =>
+        runtime.dispatchFetch(`https://cryptoscroll.test/api/notes/${id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${revokeToken}`,
+            "X-Passphrase-Proof": fixture.proof.passphraseVerifier!,
+          },
+        });
+      let readResponse: Awaited<ReturnType<typeof read>>,
+        revokeResponse: Awaited<ReturnType<typeof read>>;
+      if (order === "read first") {
+        readResponse = await open();
+        revokeResponse = await revoke();
+        expect(readResponse.status).toBe(200);
+      } else if (order === "revoke first") {
+        revokeResponse = await revoke();
+        readResponse = await open();
+        expect(revokeResponse.status).toBe(200);
+      } else {
+        [readResponse, revokeResponse] = await Promise.all([open(), revoke()]);
+      }
+      expect([readResponse.status, revokeResponse.status].sort()).toEqual([200, 410]);
+      const readBody = await readResponse.json();
+      if (readResponse.ok) expect(NoteContentSchema.safeParse(readBody).success).toBe(true);
+      else expect(readBody).toEqual({ error: { code: "DESTROYED", message: expect.any(String) } });
+      expect((await open()).status).toBe(410);
+      expect((await revoke()).status).toBe(410);
+    },
+  );
   async function recoverable(burnAfterRead = true) {
     const fixture = await envelope(burnAfterRead);
     fixture.body.creationToken = {
@@ -471,6 +547,62 @@ describe("Cloudflare Worker with real KV and Durable Objects", () => {
     expect(response.status).toBe(200);
     expect((await read(id, proof)).status).toBe(410);
   });
+
+  it.each([false, true])(
+    "separates sender revocation from read access (passphrase: %s)",
+    async (protectedNote) => {
+      const fixture = await envelope(false, protectedNote ? "separate fixture phrase" : undefined);
+      const senderSecret = generateRevocationSecret();
+      const senderToken = await deriveRevocationToken(senderSecret);
+      const body = {
+        ...fixture.body,
+        revokeTokenHash: await hashProof(senderToken),
+        creationToken: {
+          issuedAt: new Date().toISOString(),
+          nonce: crypto.randomUUID().replaceAll("-", ""),
+        },
+      };
+      const provisioned = await submit(body);
+      expect(provisioned.status).toBe(201);
+      const { id } = CreatedNoteSchema.parse(await provisioned.json());
+      expect((await submit(body)).status).toBe(200);
+      expect(
+        (
+          await submit({
+            ...body,
+            revokeTokenHash: await hashProof(
+              await deriveRevocationToken(generateRevocationSecret()),
+            ),
+          })
+        ).status,
+      ).toBe(409);
+      const resource = `https://cryptoscroll.test/api/notes/${id}`;
+      const revoke = (token: string, passphraseVerifier?: string) =>
+        runtime.dispatchFetch(resource, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            ...(passphraseVerifier && { "X-Passphrase-Proof": passphraseVerifier }),
+          },
+        });
+      const metadata = await (await runtime.dispatchFetch(resource)).json();
+      expect(NoteMetadataSchema.safeParse(metadata).success).toBe(true);
+      expect((await revoke(fixture.proof.readToken, fixture.proof.passphraseVerifier)).status).toBe(
+        403,
+      );
+      expect((await read(id, { ...fixture.proof, readToken: senderToken })).status).toBe(403);
+      if (protectedNote) {
+        expect((await revoke(senderToken)).status).toBe(403);
+        expect((await revoke(senderToken, btoa("y".repeat(32)))).status).toBe(403);
+      }
+      const opened = await read(id, fixture.proof);
+      expect(opened.status).toBe(200);
+      expect(NoteContentSchema.safeParse(await opened.json()).success).toBe(true);
+      expect((await revoke(senderToken, fixture.proof.passphraseVerifier)).status).toBe(200);
+      expect((await read(id, fixture.proof)).status).toBe(410);
+      expect((await revoke(senderToken, fixture.proof.passphraseVerifier)).status).toBe(410);
+    },
+  );
 
   it.each(["read", "revoke"] as const)(
     "keeps a note retired through interrupted KV deletion on %s",

@@ -6,6 +6,8 @@ The sender-receipt candidate is separate from production. Review `a95d98dcbb0dce
 
 ## Scope and invariants
 
+The pending sender-receipt extension is scoped in the [receipt design and rollout](../research/sender-revocation-receipt.md). Review its PR revision separately from the published software and record the independent decision before issuing live receipts.
+
 | Boundary                      | Files                                                                               | Required outcome                                                                                                                                                               |
 | ----------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Encryption and capabilities   | `src/lib/crypto.ts`, `shared/encoding.ts`, `src/lib/notes.ts`                       | Random AES-GCM key/IVs, fixed version-1 KDF, distinct read capability; no plaintext, link key or passphrase sent to API/logs/storage.                                          |

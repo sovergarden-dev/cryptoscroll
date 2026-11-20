@@ -4,6 +4,8 @@
 
 ### Added
 
+- Prepare independent sender revocation receipts for review, including a separate confirmation screen, passphrase checks and compatibility with earlier notes.
+- Show the same public note reference and time-zone-aware expiry on sharing, receipt and confirmation screens. Verify archived v1 notes and concurrent reading and revocation in isolated tests.
 - Original-text viewing and copy preserve Markdown delimiters and line breaks. A mobile shortcut focuses the editor.
 - Configurable unread deadlines for one-time notes, with a 24-hour default for new UI creations and unchanged existing links.
 - Bounded, explicit creation recovery using a timestamped independent nonce, a per-note durable pending record and an in-memory encrypted browser request; consumed/expired notes cannot be recreated by a retry.

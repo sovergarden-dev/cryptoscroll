@@ -63,12 +63,12 @@ export class NoteVault implements DurableObject {
     if (request.method === "GET") return json(metadata(note));
 
     const proof = await request.json<ReadNoteRequest>();
-    if (!equalProofs(await hashProof(proof.readToken), note.readTokenHash)) {
-      return failure(
-        "INVALID_LINK",
-        "The link key is incorrect. Ask the sender for the complete link.",
-        403,
-      );
+    const requiredHash =
+      request.method === "DELETE"
+        ? (note.revokeTokenHash ?? note.readTokenHash)
+        : note.readTokenHash;
+    if (!equalProofs(await hashProof(proof.readToken), requiredHash)) {
+      return failure("INVALID_LINK", "This link does not authorize the requested operation.", 403);
     }
     if (note.hasPassphrase) {
       if (!proof.passphraseVerifier)
