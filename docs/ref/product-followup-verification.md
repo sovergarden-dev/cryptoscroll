@@ -1,16 +1,28 @@
 # Product follow-up verification
 
-The current published frontend and API use `84b5ff9`. On November 20, 2026, 60 unit and integration tests and 36 browser scenarios passed locally and in Linux CI. [Main CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/44723488917)
+The published frontend and API use `f5e9fc1`. The release passed 70 unit and integration tests and 51 browser scenarios in Linux CI. The preceding release at `84b5ff9` passed 60 and 36 respectively. [Current CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/44733328874) · [Previous CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/44723488917)
 
 The earlier language-selector release (`06e0c0b`) and the November 14 follow-up (`bbf4518`) each passed 52 unit and integration tests and 24 browser scenarios. [November 14 CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/43589898896) · [Language-selector CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/44711406531)
 
 ## Original text and recovery
 
+### Complete input, keyboard copy and waiting for expiry
+
+On November 20, a Chromium Pixel 7 profile opened the public editor in Vietnamese. The initial HTML also negotiated Vietnamese. An ASCII input of 32,769 bytes retained its final character, reported one excess byte and blocked submission. CI also checked the same boundary with Vietnamese characters and emoji.
+
+A WebKit iPhone 13 profile opened a disposable one-time note. With clipboard access denied in the test context, focus and selection covered the entire original. The keyboard copy event received exactly the expected Markdown, Unicode, tabs, spaces and final line break. Presentation and copying together used one payload read. An additional test covered Windows line endings and partial selections. Physical OS clipboard behavior remains outside these measurements.
+
+A second live fixture had a real 70-second unread deadline. The waiting browser's clock was set three hours behind the server. The page received a terminal metadata response, announced expiry in Vietnamese and removed the opening action. The waiting browser made zero payload requests. Both live fixture IDs returned 410 at cleanup. An earlier test attempt timed out during public-page startup before creating any fixture.
+
+The CI matrices on the PR and merged release passed all 51 browser scenarios. The Windows full run passed 47 in one pass. QR download, returning to a protected waiting page, creation acknowledgement recovery and the Chromium accessibility audit passed individually on rerun under their original timeouts. [PR CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/44732438917) · [Merge CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/44733328874)
+
+### Earlier reader release
+
 Workerd tests exercised interrupted ciphertext cleanup during an authorized read and revocation. After either interruption, the terminal state survived an object restart, further reads returned 410, and the alarm removed the remaining ciphertext once storage became available. The test uses isolated storage fault controls. The opted-in production API smoke verified old note envelopes, creation recovery, protected notes, timed revocation and exactly one successful opening from twelve simultaneous requests.
 
 After the Worker and frontend were deployed, Chromium in a Pixel 7 profile focused the public Vietnamese editor from the mobile shortcut. Its first creation response was a simulated 429 with a four-second `Retry-After`. The control disabled and reopened, then an explicit retry submitted the same envelope to the live API. A WebKit iPhone 13 profile opened the disposable note, switched to the literal string and copied it through a test clipboard. Spaces, Markdown, Unicode, a tab and the final line break matched exactly. The reader made one payload request and cleanup verified HTTP 410. Public service, CSP and CORS checks passed at 11:07 UTC. Device clipboard permissions remain outside this run.
 
-Separate draft [PR #5](https://github.com/sovergarden-dev/cryptoscroll/pull/5) contains sender revocation receipts. The review candidate at `a95d98d` passed 62 unit and integration tests and 39 browser scenarios. Independent review is pending selection of a reviewer. [Candidate CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/44724140711)
+The separate sender-receipt candidate at `df799ce` passed 77 unit and integration tests and 54 browser scenarios. Tests restored two active records created and decrypted by the published `84b5ff9` source, then opened them using the candidate. Only the test records' deadlines were moved forward. The suite also covered reading before revocation, revoking before reading and overlapping requests, and matched the public reference and zoned expiry across the sender, receipt and confirmation screens. An independent reviewer has yet to be selected. [Draft PR #5](https://github.com/sovergarden-dev/cryptoscroll/pull/5) · [Candidate CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/44733656274)
 
 The table records the local implementation checks of November 14. Production checks and the device coverage are recorded below. The recovery design and the scope for independent review are available separately. [Creation recovery](../research/creation-recovery.md) · [Review brief](security-review-brief.md)
 

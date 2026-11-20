@@ -11,7 +11,8 @@ Updated November 20, 2026. Every check that exercised a note used a disposable t
 - Previous API version after updating the frontend/preview origin allowlist: `141e42e1-a737-42eb-b0b5-2b2e76697c09`.
 - Hardened API version: `c477817a-6ff5-4edd-a8de-e100c63db795`, deployed from the implementation merged through [PR #1](https://github.com/sovergarden-dev/cryptoscroll/pull/1).
 - Previous follow-up API version: `3e3695d2-1b36-42df-b204-cc0e79668a4b`. [PR #2](https://github.com/sovergarden-dev/cryptoscroll/pull/2)
-- Current Worker version: `42bb97ae-e851-40bc-a1ba-0a6a93ad3079`. The Worker and Lovable frontend were deployed from `84b5ff9`. [PR #4](https://github.com/sovergarden-dev/cryptoscroll/pull/4)
+- The original-text release used Worker `42bb97ae-e851-40bc-a1ba-0a6a93ad3079` and frontend `84b5ff9`. [PR #4](https://github.com/sovergarden-dev/cryptoscroll/pull/4)
+- The current release uses Worker `83467116-229f-47af-ac11-3a137a93a599` and frontend `f5e9fc1`. The Worker passed its synthetic smoke before the synced Lovable frontend was published. [PR #6](https://github.com/sovergarden-dev/cryptoscroll/pull/6) · [Main CI](https://github.com/sovergarden-dev/cryptoscroll/actions/runs/44733328874)
 
 The main domain currently resolves directly to Lovable. A Cloudflare Worker route requires a [proxied DNS record](https://developers.cloudflare.com/workers/configuration/routing/routes/), so `/api` on that host is not the active backend. Hosted frontend builds use the dedicated Worker endpoint. Local loopback development retains the `/api` proxy; `VITE_API_URL` overrides either default. Shared note links retain the frontend origin and fragment-only key.
 

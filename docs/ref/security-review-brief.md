@@ -1,8 +1,8 @@
 # External security review brief
 
-An independent review is pending. The published frontend and Worker use commit `84b5ff958bb66d7c672bf3964c7379f15f05f4b2`. Use its root `package-lock.json`, `worker/package-lock.json` and `bun.lock` to reproduce the dependency set. GitHub private vulnerability reporting is enabled. [Pinned source](https://github.com/sovergarden-dev/cryptoscroll/tree/84b5ff958bb66d7c672bf3964c7379f15f05f4b2) · [Reporting policy](../../SECURITY.md)
+An independent review is pending. The published frontend and Worker use commit `f5e9fc119ec0c7fb0ad55a5b769bc442b6e25535`. Use its root `package-lock.json`, `worker/package-lock.json` and `bun.lock` to reproduce the dependency set. GitHub private vulnerability reporting is enabled. [Pinned source](https://github.com/sovergarden-dev/cryptoscroll/tree/f5e9fc119ec0c7fb0ad55a5b769bc442b6e25535) · [Reporting policy](../../SECURITY.md)
 
-The sender-receipt candidate is separate from production. Review `a95d98dcbb0dce79de004634236c4f447d25be9a` together with its compatibility tests and record findings and sign-off before release. The owner has not selected an independent reviewer. [Review PR](https://github.com/sovergarden-dev/cryptoscroll/pull/5) · [Candidate design](https://github.com/sovergarden-dev/cryptoscroll/blob/a95d98dcbb0dce79de004634236c4f447d25be9a/docs/research/sender-revocation-receipt.md)
+Review the draft `df799cefed7933b565c630e101319bd5ed8a5504` together with the archived v1 fixtures, the read/revoke ordering checks, and the receipt identity and expiry shown before confirmation. Record findings and sign-off before release. The owner has not selected an independent reviewer. [Review PR](https://github.com/sovergarden-dev/cryptoscroll/pull/5) · [Candidate design](https://github.com/sovergarden-dev/cryptoscroll/blob/df799cefed7933b565c630e101319bd5ed8a5504/docs/research/sender-revocation-receipt.md)
 
 ## Scope and invariants
 
