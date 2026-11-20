@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { ArrowLeft, Check, Copy, Download, Share2, LockKeyhole, TriangleAlert } from "lucide-react";
 import { Button } from "./ui/button";
-import type { CreatedNote } from "@/lib/notes";
+import { revokeNote, type CreatedNote } from "@/lib/notes";
+import { SenderReceipt } from "./SenderReceipt";
 import { RevokeNoteDialog, type RevocationOutcome } from "./RevokeNoteDialog";
 import { useI18n } from "@/lib/i18n";
 import type { MessageKey } from "@/lib/messages";
@@ -195,8 +196,21 @@ export function NoteSuccess({
         <Button variant="ghost" onClick={onCreateAnother}>
           <ArrowLeft aria-hidden="true" /> {t("createAnother")}
         </Button>
-        <RevokeNoteDialog note={note} onRetired={setRetired} />
+        <RevokeNoteDialog
+          hasPassphrase={note.hasPassphrase}
+          onRetired={setRetired}
+          onConfirm={(passphrase) => {
+            const target = new URL(note.revocationUrl ?? note.url);
+            return revokeNote(
+              target.pathname.split("/").at(-1)!,
+              target.hash.slice(1),
+              passphrase,
+              note.revocationUrl ? "receipt" : "read",
+            );
+          }}
+        />
       </div>
+      {note.revocationUrl && <SenderReceipt url={note.revocationUrl} />}
     </section>
   );
 }

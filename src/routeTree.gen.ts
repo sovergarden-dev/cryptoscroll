@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as NoteIdRouteImport } from './routes/note.$id'
+import { Route as RevokeIdRouteImport } from './routes/revoke.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,40 @@ const NoteIdRoute = NoteIdRouteImport.update({
   path: '/note/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RevokeIdRoute = RevokeIdRouteImport.update({
+  id: '/revoke/$id',
+  path: '/revoke/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/note/$id': typeof NoteIdRoute
+  '/revoke/$id': typeof RevokeIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/note/$id': typeof NoteIdRoute
+  '/revoke/$id': typeof RevokeIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/note/$id': typeof NoteIdRoute
+  '/revoke/$id': typeof RevokeIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/note/$id'
+  fullPaths: '/' | '/note/$id' | '/revoke/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/note/$id'
-  id: '__root__' | '/' | '/note/$id'
+  to: '/' | '/note/$id' | '/revoke/$id'
+  id: '__root__' | '/' | '/note/$id' | '/revoke/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   NoteIdRoute: typeof NoteIdRoute
+  RevokeIdRoute: typeof RevokeIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NoteIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/revoke/$id': {
+      id: '/revoke/$id'
+      path: '/revoke/$id'
+      fullPath: '/revoke/$id'
+      preLoaderRoute: typeof RevokeIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   NoteIdRoute: NoteIdRoute,
+  RevokeIdRoute: RevokeIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

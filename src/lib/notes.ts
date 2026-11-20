@@ -18,8 +18,10 @@ import {
   decryptNote,
   deriveKeyFromPassphrase,
   deriveReadToken,
+  deriveRevocationToken,
   encryptNote,
   generateKey,
+  generateRevocationSecret,
   keyToBase64,
 } from "./crypto";
 import { consumeNote, getNoteMetadata, revokeEncryptedNote, uploadNote } from "./note-api";
@@ -29,18 +31,20 @@ export type { ExpiryOption, NoteMetadata, Result } from "../../shared/protocol";
 
 export interface CreatedNote {
   url: string;
+  revocationUrl?: string;
   expiresAt: Date;
   burnAfterRead: boolean;
   hasPassphrase: boolean;
 }
 
-export interface NoteData extends Omit<CreatedNote, "url"> {
+export interface NoteData extends Omit<CreatedNote, "url" | "revocationUrl"> {
   content: string;
 }
 
 export interface PendingCreation {
   envelope: CreateNoteRequest;
   encodedKey: string;
+  revocationSecret: string;
   retryUntil: number;
 }
 
@@ -101,6 +105,7 @@ export async function prepareNoteCreation(
     );
     const primaryKey = await generateKey();
     const encodedKey = await keyToBase64(primaryKey);
+    const revocationSecret = generateRevocationSecret();
     let encrypted = await encryptNote(options.content, primaryKey);
     let protection: { passphraseSalt: string; passphraseVerifier: string } | undefined;
     if (options.passphrase !== undefined) {
@@ -118,6 +123,7 @@ export async function prepareNoteCreation(
       hasPassphrase: protection !== undefined,
       ...protection,
       readTokenHash: await hashProof(await deriveReadToken(encodedKey)),
+      revokeTokenHash: await hashProof(await deriveRevocationToken(revocationSecret)),
       creationToken: {
         issuedAt,
         nonce: Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
@@ -130,6 +136,7 @@ export async function prepareNoteCreation(
       data: {
         envelope,
         encodedKey,
+        revocationSecret,
         retryUntil: Date.parse(issuedAt) + CREATION_RETRY_MS,
       },
     };
@@ -156,6 +163,7 @@ export async function submitNoteCreation(pending: PendingCreation): Promise<Resu
     ok: true,
     data: {
       url: `${window.location.origin}${import.meta.env.BASE_URL}note/${result.data.id}#${pending.encodedKey}`,
+      revocationUrl: `${window.location.origin}${import.meta.env.BASE_URL}revoke/${result.data.id}#${pending.revocationSecret}`,
       expiresAt: new Date(result.data.expiresAt),
       burnAfterRead: pending.envelope.burnAfterRead,
       hasPassphrase: pending.envelope.hasPassphrase,
@@ -169,7 +177,6 @@ export async function createNote(options: CreationOptions): Promise<Result<Creat
 }
 
 type NoteAccess = {
-  primaryKey: CryptoKey;
   proof: ReadNoteRequest;
   burnAfterRead: boolean;
   passphraseKey?: CryptoKey;
@@ -180,17 +187,19 @@ async function prepareNoteAccess(
   encodedKey: string,
   passphrase?: string,
   knownMetadata?: NoteMetadata,
+  capability: "read" | "receipt" = "read",
 ): Promise<Result<NoteAccess>> {
   if (!NOTE_ID.test(id))
     return {
       ok: false,
       error: { code: "NOT_FOUND", message: "This note doesn't exist or was already read." },
     };
-  let primaryKey: CryptoKey;
   let readToken: string;
   try {
-    primaryKey = await base64ToKey(encodedKey);
-    readToken = await deriveReadToken(encodedKey);
+    readToken =
+      capability === "receipt"
+        ? await deriveRevocationToken(encodedKey)
+        : await deriveReadToken(encodedKey);
   } catch {
     return {
       ok: false,
@@ -229,7 +238,6 @@ async function prepareNoteAccess(
   return {
     ok: true,
     data: {
-      primaryKey,
       burnAfterRead: info.data.burnAfterRead,
       proof: { readToken, ...(protection && { passphraseVerifier: protection.verifier }) },
       ...(protection && { passphraseKey: protection.key }),
@@ -237,8 +245,14 @@ async function prepareNoteAccess(
   };
 }
 
-export async function revokeNote(id: string, encodedKey: string, passphrase?: string) {
-  const access = await prepareNoteAccess(id, encodedKey, passphrase);
+export async function revokeNote(
+  id: string,
+  encodedKey: string,
+  passphrase?: string,
+  capability: "read" | "receipt" = "read",
+  metadata?: NoteMetadata,
+) {
+  const access = await prepareNoteAccess(id, encodedKey, passphrase, metadata, capability);
   if (!access.ok) return access;
   return revokeEncryptedNote(id, access.data.proof);
 }
@@ -251,7 +265,19 @@ export async function readNote(
 ): Promise<Result<NoteData>> {
   const access = await prepareNoteAccess(id, encodedKey, passphrase, knownMetadata);
   if (!access.ok) return access;
-  const { primaryKey, passphraseKey, proof } = access.data;
+  const { passphraseKey, proof } = access.data;
+  let primaryKey: CryptoKey;
+  try {
+    primaryKey = await base64ToKey(encodedKey);
+  } catch {
+    return {
+      ok: false,
+      error: {
+        code: "CRYPTO_UNAVAILABLE",
+        message: "Could not prepare the browser decryption key.",
+      },
+    };
+  }
   const result = await consumeNote(id, proof, access.data.burnAfterRead);
   if (!result.ok) return result;
   try {

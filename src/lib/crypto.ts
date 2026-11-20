@@ -11,10 +11,15 @@ export function generateKey(): Promise<CryptoKey> {
 }
 
 export async function keyToBase64(key: CryptoKey): Promise<string> {
-  return bytesToBase64(new Uint8Array(await crypto.subtle.exportKey("raw", key)))
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replaceAll("=", "");
+  return encodeSecret(new Uint8Array(await crypto.subtle.exportKey("raw", key)));
+}
+
+function encodeSecret(bytes: Uint8Array): string {
+  return bytesToBase64(bytes).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+}
+
+export function generateRevocationSecret(): string {
+  return encodeSecret(crypto.getRandomValues(new Uint8Array(32)));
 }
 
 function keyBytes(encoded: string): Uint8Array<ArrayBuffer> {
@@ -67,7 +72,7 @@ export async function deriveKeyFromPassphrase(
   return { key, verifier };
 }
 
-export async function deriveReadToken(encoded: string): Promise<string> {
+async function deriveCapability(encoded: string, purpose: "read" | "revoke"): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
     keyBytes(encoded),
@@ -76,6 +81,11 @@ export async function deriveReadToken(encoded: string): Promise<string> {
     ["sign"],
   );
   return bytesToBase64(
-    new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode("cryptoscroll:read:v1"))),
+    new Uint8Array(
+      await crypto.subtle.sign("HMAC", key, encoder.encode(`cryptoscroll:${purpose}:v1`)),
+    ),
   );
 }
+
+export const deriveReadToken = (encoded: string) => deriveCapability(encoded, "read");
+export const deriveRevocationToken = (encoded: string) => deriveCapability(encoded, "revoke");

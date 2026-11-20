@@ -72,11 +72,16 @@ export const CreateNoteSchema = z
     ...metadataFields,
     ...payloadFields,
     readTokenHash: base64(32),
+    revokeTokenHash: base64(32).optional(),
     passphraseVerifier: base64(32).optional(),
     creationToken: CreationTokenSchema.optional(),
   })
   .strict()
   .refine(validSalt, "Invalid passphrase salt")
+  .refine(
+    (value) => value.revokeTokenHash !== value.readTokenHash,
+    "Revocation requires an independent capability",
+  )
   .refine(
     (value) => value.hasPassphrase === (value.passphraseVerifier !== undefined),
     "Invalid passphrase verifier",

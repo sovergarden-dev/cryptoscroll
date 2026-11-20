@@ -48,7 +48,7 @@ The target experience is a small, dark, accessible tool for people handing a tem
 | `POST /api/notes`          | Validate/store the encrypted envelope; return `{ id, expiresAt }` with HTTP 201.                                                            |
 | `GET /api/notes/:id`       | Return metadata only: version, expiry, burn flag, passphrase flag and public salt. Never return ciphertext or verifiers, and never consume. |
 | `POST /api/notes/:id/read` | Verify the read capability and optional passphrase proof, then return ciphertext and consume if one-time.                                   |
-| `DELETE /api/notes/:id`    | Revoke after the same authorization checks; use headers for proofs, no unauthenticated deletion. Not a follow-up required by reading.       |
+| `DELETE /api/notes/:id`    | Revoke with the sender proof for receipt-enabled notes, or the read proof for legacy notes. Protected notes also require the passphrase proof. |
 | `GET /api/stats`           | Return the aggregate creation count.                                                                                                        |
 | `GET /api/health`          | Check actual KV and Durable Object access; return 503 if unavailable.                                                                       |
 
@@ -69,7 +69,7 @@ All API responses use `Cache-Control: no-store`, `X-Content-Type-Options: nosnif
 - Import the derived bytes as a non-extractable AES-GCM key; compute SHA-256 of the derived bytes as a separate verifier. Do not export a non-extractable key and do not use an all-zero AES-GCM IV as a verifier.
 - First encrypt the plaintext with the link key. Then encrypt the JSON serialization of that payload with the passphrase key and a fresh IV.
 - Salt is public. The verifier stays private to the backend and is never included in metadata or content responses. The client submits a proof derived locally; the passphrase and encryption key are never sent.
-- Verify both capabilities before any consume/delete operation. Wrong or missing passphrases leave ciphertext and lifecycle unchanged. Do not trim or silently normalize a non-empty passphrase.
+- For reads verify the read proof. For deletion verify the independent sender proof if the stored record has a `revokeTokenHash`, otherwise verify the legacy read proof. Also verify the original passphrase proof for any protected note. Wrong or missing passphrases leave ciphertext and lifecycle unchanged. Do not trim or silently normalize a non-empty passphrase. The receipt's design and rollout constraints are recorded in [the review decision](../../docs/research/sender-revocation-receipt.md).
 
 ### URL format
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Trash2 } from "lucide-react";
-import { revokeNote, type CreatedNote } from "@/lib/notes";
+import type { revokeNote } from "@/lib/notes";
 import { Button } from "./ui/button";
 import { useI18n } from "@/lib/i18n";
 import type { Failure } from "../../shared/protocol";
@@ -18,10 +18,12 @@ import {
 export type RevocationOutcome = "revoked" | "unavailable";
 
 export function RevokeNoteDialog({
-  note,
+  hasPassphrase,
+  onConfirm,
   onRetired,
 }: {
-  note: CreatedNote;
+  hasPassphrase: boolean;
+  onConfirm: (passphrase?: string) => ReturnType<typeof revokeNote>;
   onRetired: (outcome: RevocationOutcome) => void;
 }) {
   const { t, errorText } = useI18n();
@@ -44,15 +46,10 @@ export function RevokeNoteDialog({
 
   async function revoke(event: FormEvent) {
     event.preventDefault();
-    if (busy || (note.hasPassphrase && !passphrase)) return;
+    if (busy || (hasPassphrase && !passphrase)) return;
     setBusy(true);
     setError(null);
-    const url = new URL(note.url);
-    const result = await revokeNote(
-      url.pathname.split("/").at(-1)!,
-      url.hash.slice(1),
-      note.hasPassphrase ? passphrase : undefined,
-    );
+    const result = await onConfirm(hasPassphrase ? passphrase : undefined);
     setBusy(false);
     setPassphrase("");
     if (result.ok) onRetired("revoked");
@@ -74,7 +71,7 @@ export function RevokeNoteDialog({
             <AlertDialogTitle>{t("revokeTitle")}</AlertDialogTitle>
             <AlertDialogDescription>{t("revokeHelp")}</AlertDialogDescription>
           </AlertDialogHeader>
-          {note.hasPassphrase && (
+          {hasPassphrase && (
             <div>
               <label htmlFor="revoke-passphrase" className="block text-sm font-medium">
                 {t("revokePassphrase")}
@@ -118,7 +115,7 @@ export function RevokeNoteDialog({
             <Button
               type="submit"
               variant="destructive"
-              disabled={busy || (note.hasPassphrase && !passphrase)}
+              disabled={busy || (hasPassphrase && !passphrase)}
               aria-busy={busy}
             >
               {t(busy ? "revoking" : "revoke")}
